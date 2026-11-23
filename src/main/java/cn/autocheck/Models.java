@@ -14,7 +14,12 @@ public final class Models {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Event(String waybillNo, String eventTime, String timeZone, String eventLocation,
-                        String eventDetail, String originalTracking, String eventCode, String orgName) {
+                        String eventDetail, String originalTracking, String eventCode, String orgName,
+                        String country, String region, String city) {
+        public Event(String waybillNo, String eventTime, String timeZone, String eventLocation,
+                     String eventDetail, String originalTracking, String eventCode, String orgName) {
+            this(waybillNo, eventTime, timeZone, eventLocation, eventDetail, originalTracking, eventCode, orgName, "", "", "");
+        }
         public String location() { return clean(eventLocation).isEmpty() ? clean(orgName) : clean(eventLocation); }
         public String detail() { return clean(eventDetail).isEmpty() ? clean(originalTracking) : clean(eventDetail); }
         public String description() { return "【" + location() + "】 " + detail(); }
@@ -26,10 +31,22 @@ public final class Models {
 
     public enum MatchMode { CONTAINS, EXACT }
 
-    public record Rule(boolean enabled, String name, String location, String detail, MatchMode mode) {
+    public enum AreaFilter {
+        ANY("不限"), MAINLAND("中国大陆"), OUTSIDE("大陆以外"), UNKNOWN("地址未知");
+        public final String label;
+        AreaFilter(String label) { this.label = label; }
+        @Override public String toString() { return label; }
+    }
+
+    public record Rule(boolean enabled, String name, String location, String detail, MatchMode mode, AreaFilter area) {
+        public Rule(boolean enabled, String name, String location, String detail, MatchMode mode) {
+            this(enabled, name, location, detail, mode, AreaFilter.ANY);
+        }
+        public Rule { if (area == null) area = AreaFilter.ANY; }
         public boolean matches(Event event) {
-            if (!enabled || event == null || (clean(location).isEmpty() && clean(detail).isEmpty())) return false;
-            return match(event.location(), location) && match(event.detail(), detail);
+            if (!enabled || event == null || (area == AreaFilter.ANY && clean(location).isEmpty() && clean(detail).isEmpty())) return false;
+            return (area == AreaFilter.ANY || MainlandLocation.classify(event) == area)
+                && match(event.location(), location) && match(event.detail(), detail);
         }
         private boolean match(String value, String condition) {
             String needle = clean(condition);
@@ -38,6 +55,25 @@ public final class Models {
     }
 
     public record Settings(int intervalSeconds, String timeZoneType, List<Rule> rules) {
+        public static Settings sfDefaults() {
+            return new Settings(3, "", List.of(
+                new Rule(true, "清关进行中", "", "清关进行中", MatchMode.CONTAINS),
+                new Rule(true, "海关查验", "", "海关查验", MatchMode.CONTAINS)));
+        }
+        public static Settings track17Defaults() {
+            return new Settings(3, "senderView", List.of(
+                new Rule(true, "清关持续中", "", "清关持续中", MatchMode.CONTAINS),
+                new Rule(true, "快件已开始清关", "", "快件已开始清关", MatchMode.CONTAINS),
+                new Rule(true, "成都青龙场", "", "成都青龙场", MatchMode.CONTAINS)));
+        }
+        /** Migrate previous 17TRACK settings so hidden address constraints cannot affect progress matching. */
+        public Settings progressOnly() {
+            List<Rule> progressRules = rules.stream()
+                .filter(r -> !clean(r.detail()).isEmpty() || !clean(r.location()).isEmpty())
+                .map(r -> new Rule(r.enabled(), r.name(), "", clean(r.detail()).isEmpty() ? r.location() : r.detail(), r.mode()))
+                .toList();
+            return new Settings(intervalSeconds, timeZoneType, progressRules);
+        }
         public static Settings defaults() {
             return new Settings(3, "senderView", List.of(
                 new Rule(true, "清关中", "中国", "快件正在清关", MatchMode.CONTAINS),

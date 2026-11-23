@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "result": [{
+    "waybillNo": "SF5158351178464",
+    "timeZone": "UTC+8",
+    "barNewList": [
+      {"barScanDt":"2026-09-16","barScanTm":"19:59:12","opCode":"43","remark":"顺丰速运 已收取快件","localTimeZone":"UTC+7"},
+      {"barScanDt":"2026-09-17","barScanTm":"08:15:34","opCode":"30","remark":"快件在【老挝磨丁跨境仓】完成分拣，准备发往下一站","localTimeZone":"UTC+7"},
+      {"barScanDt":"2026-09-18","barScanTm":"08:17:34","opCode":"649","remark":"快件在【老挝】转运，请耐心等候","localTimeZone":"UTC+7"},
+      {"barScanDt":"2026-09-19","barScanTm":"07:17:34","scanDate":"2026-09-18","opCode":"649","remark":"快件在【LA】转运，请耐心等候","localTimeZone":"UTC+7"},
+      {"barScanDt":"2026-09-28","barScanTm":"20:02:05","opCode":"605","remark":"清关进行中,请耐心等候","localTimeZone":"UTC+7"},
+      {"barScanDt":"2026-10-14","barScanTm":"19:51:45","opCode":"72","remark":"快件正经海关查验或等待查验中，我们正在积极处理，请您放心！","localTimeZone":"UTC+8"},
+      {"barScanDt":"2026-11-21","barScanTm":"20:24:10","opCode":"33","remark":"客户已取消寄件","localTimeZone":"UTC+7"}
+    ]
+  }],
+  "message":"请求成功"
+}

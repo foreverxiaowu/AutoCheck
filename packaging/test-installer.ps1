@@ -1,4 +1,4 @@
-﻿param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.0.0.exe'))
+param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.1.0.exe'))
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $installerPath = [IO.Path]::GetFullPath($Installer)

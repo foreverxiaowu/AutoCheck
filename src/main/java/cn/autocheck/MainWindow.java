@@ -21,9 +21,23 @@ import static cn.autocheck.Models.*;
 
 public final class MainWindow extends JFrame {
     private static final Color NAVY = new Color(25, 44, 65);
-    private final FilesService files;
-    private final Path data;
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> new Thread(r, "yto-batch-worker"));
+    private FilesService files;
+    private FilesService settingsFiles;
+    private Path data;
+    private final Path rootData;
+    private final JComboBox<String> source = new JComboBox<>(new String[]{"圆通国际", "17TRACK", "顺丰国际"});
+    private final JComboBox<Track17Config.Carrier> carrier = new JComboBox<>();
+    private final JButton configureCarriers = new JButton("物流公司配置");
+    private final JLabel title = new JLabel();
+    private final JLabel batchNote = new JLabel();
+    private final JLabel ruleHint = new JLabel();
+    private Track17Config track17Config = Track17Config.defaults();
+    private boolean track17;
+    private boolean sf;
+    private boolean progressOnly() { return track17 || sf; }
+    private String sourceName() { return sf ? "顺丰国际" : track17 ? "17TRACK" : "圆通国际"; }
+    private boolean switching;
+    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> new Thread(r, "tracking-batch-worker"));
     private final JTextArea input = new JTextArea();
     private final JTextArea details = new JTextArea();
     private final JTextArea logs = new JTextArea();
@@ -39,11 +53,11 @@ public final class MainWindow extends JFrame {
     private final JComboBox<String> view = new JComboBox<>(new String[]{"全部运单", "匹配条件", "未匹配条件", "查询失败", "暂无轨迹", "待查询"});
     private final JSpinner interval = new JSpinner(new SpinnerNumberModel(3, 1, 120, 1));
     private final JComboBox<String> timeZone = new JComboBox<>(new String[]{"寄件人视角", "收件人视角"});
-    private final DefaultTableModel ruleModel = new DefaultTableModel(new Object[]{"启用", "条件名称", "地点", "物流信息", "匹配方式"}, 0) {
-        @Override public Class<?> getColumnClass(int column) { return column == 0 ? Boolean.class : String.class; }
+    private final DefaultTableModel ruleModel = new DefaultTableModel(new Object[]{"启用", "条件名称", "地点", "物流信息", "匹配方式", "所在区域"}, 0) {
+        @Override public Class<?> getColumnClass(int column) { return column == 0 ? Boolean.class : column == 5 ? AreaFilter.class : String.class; }
     };
     private final JTable ruleTable = new JTable(ruleModel);
-    private final DefaultTableModel resultModel = new DefaultTableModel(new Object[]{"运单号", "查询状态", "最新时间", "最新地点", "最新物流信息", "匹配条件"}, 0) {
+    private final DefaultTableModel resultModel = new DefaultTableModel(new Object[]{"运单号", "查询状态", "最新时间", "最新地点", "物流进度", "匹配条件"}, 0) {
         @Override public boolean isCellEditable(int row, int column) { return false; }
     };
     private final JTable table = new JTable(resultModel);
@@ -57,14 +71,20 @@ public final class MainWindow extends JFrame {
 
     public MainWindow(Path data) throws IOException {
         super("AutoCheck · 圆通国际批量查询");
+        this.rootData = data;
         this.data = data;
         this.files = new FilesService(data);
+        this.settingsFiles = files;
+        try { track17Config = Track17Config.load(rootData); }
+        catch (Exception e) { log("物流公司配置读取失败，暂用默认配置：" + e.getMessage()); }
+        updateCarriers();
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         setSize(1320, 900);
         setMinimumSize(new Dimension(1080, 720));
         setLocationRelativeTo(null);
         build();
         restore();
+        updateSourceControls();
         wire();
         rebuild();
         addWindowListener(new WindowAdapter() {
@@ -84,13 +104,17 @@ public final class MainWindow extends JFrame {
         root.setBorder(new EmptyBorder(16, 18, 14, 18));
         setContentPane(root);
         JPanel header = new JPanel(new BorderLayout());
-        JLabel title = new JLabel("AutoCheck  /  圆通国际");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 25));
         title.setForeground(NAVY);
         header.add(title, BorderLayout.WEST);
-        JLabel note = new JLabel("每批 10 单  ·  自动保存进度  ·  人工验证码");
-        note.setForeground(new Color(90, 105, 120));
-        header.add(note, BorderLayout.EAST);
+        batchNote.setForeground(new Color(90, 105, 120));
+        header.add(batchNote, BorderLayout.EAST);
+        JPanel sources = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
+        source.setPreferredSize(new Dimension(125, 28));
+        carrier.setPreferredSize(new Dimension(240, 28));
+        sources.add(new JLabel("查询平台")); sources.add(source);
+        sources.add(carrier); sources.add(configureCarriers);
+        header.add(sources, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
         JPanel sidebar = new JPanel(new BorderLayout(0, 10));
@@ -140,7 +164,11 @@ public final class MainWindow extends JFrame {
         summary.setFont(summary.getFont().deriveFont(Font.BOLD, 15));
         summary.setForeground(NAVY); top.add(summary, BorderLayout.NORTH);
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 7, 0));
+        view.setPreferredSize(new Dimension(145, 28));
+        search.setPreferredSize(new Dimension(135, 28));
+        search.setColumns(10);
         toolbar.add(view); toolbar.add(new JLabel("搜索")); toolbar.add(search);
+        view.setName("resultView"); source.setName("querySource"); carrier.setName("carrier");
         JButton csv = new JButton("导出当前列表"); toolbar.add(csv);
         JButton json = new JButton("导出完整轨迹"); toolbar.add(json);
         csv.addActionListener(e -> export(false)); json.addActionListener(e -> export(true));
@@ -148,7 +176,7 @@ public final class MainWindow extends JFrame {
         table.setRowHeight(31); table.setAutoCreateRowSorter(true);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        int[] widths = {150, 100, 170, 175, 220, 150};
+        int[] widths = {145, 85, 155, 145, 190, 120};
         for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean selected, boolean focus, int row, int col) {
@@ -182,16 +210,16 @@ public final class MainWindow extends JFrame {
     private JPanel rulesPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBorder(new EmptyBorder(15, 12, 12, 12));
-        JLabel hint = new JLabel("<html>只匹配最新轨迹：同一条件的“地点”和“物流信息”须同时满足；多个条件满足任一条即匹配。<br>字段留空表示不限；支持包含和精确匹配。编辑后点击“保存并应用”。</html>");
-        panel.add(hint, BorderLayout.NORTH);
+        panel.add(ruleHint, BorderLayout.NORTH);
         ruleTable.setRowHeight(34);
         ruleTable.getColumnModel().getColumn(0).setMaxWidth(60);
         ruleTable.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(new JComboBox<>(new String[]{"包含", "精确"})));
+        ruleTable.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JComboBox<>(AreaFilter.values())));
         panel.add(new JScrollPane(ruleTable), BorderLayout.CENTER);
         JPanel bottom = new JPanel(new GridLayout(0, 1, 0, 10));
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton add = new JButton("添加条件"), remove = new JButton("删除选中"), save = new JButton("保存并应用");
-        add.addActionListener(e -> ruleModel.addRow(new Object[]{true, "新条件", "", "", "包含"}));
+        add.addActionListener(e -> ruleModel.addRow(new Object[]{true, "新条件", "", "", "包含", AreaFilter.ANY}));
         remove.addActionListener(e -> { if (ruleTable.getSelectedRow() >= 0) ruleModel.removeRow(ruleTable.convertRowIndexToModel(ruleTable.getSelectedRow())); });
         save.addActionListener(e -> { try { saveSettings(); rebuild(); log("筛选条件已保存并应用"); } catch (Exception ex) { error(ex); } });
         buttons.add(add); buttons.add(remove); buttons.add(save); bottom.add(buttons);
@@ -206,12 +234,13 @@ public final class MainWindow extends JFrame {
 
     private void restore() {
         try {
-            Settings saved = files.loadSettings();
+            Settings saved = settingsFiles.loadSettings();
             if (saved != null && saved.rules() != null) settings = saved;
         } catch (Exception e) { log("设置文件读取失败，已加载默认值：" + e.getMessage()); }
+        if (progressOnly()) settings = settings.progressOnly();
         interval.setValue(Math.max(1, Math.min(120, settings.intervalSeconds())));
         timeZone.setSelectedIndex("consigneeView".equals(settings.timeZoneType()) ? 1 : 0);
-        for (Rule rule : settings.rules()) ruleModel.addRow(new Object[]{rule.enabled(), rule.name(), rule.location(), rule.detail(), rule.mode() == MatchMode.EXACT ? "精确" : "包含"});
+        for (Rule rule : settings.rules()) ruleModel.addRow(new Object[]{rule.enabled(), rule.name(), rule.location(), rule.detail(), rule.mode() == MatchMode.EXACT ? "精确" : "包含", rule.area()});
         try {
             Snapshot snapshot = files.loadSnapshot();
             if (snapshot != null) {
@@ -225,6 +254,9 @@ public final class MainWindow extends JFrame {
     }
 
     private void wire() {
+        source.addActionListener(e -> switchWorkspace());
+        carrier.addActionListener(e -> { if (track17) switchWorkspace(); });
+        configureCarriers.addActionListener(e -> editCarriers());
         start.addActionListener(e -> begin(false)); resume.addActionListener(e -> begin(true));
         importButton.addActionListener(e -> importFile());
         stop.addActionListener(e -> { control.cancel(); stop.setEnabled(false); pause.setEnabled(false); status.setText("正在停止，将保留已返回的结果…"); });
@@ -239,6 +271,120 @@ public final class MainWindow extends JFrame {
             public void changedUpdate(DocumentEvent e) { rebuild(); }
         });
         table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) showDetails(); });
+    }
+
+    private void updateCarriers() {
+        boolean wasSwitching = switching;
+        switching = true;
+        carrier.removeAllItems();
+        for (Track17Config.Carrier item : track17Config.carriers()) {
+            carrier.addItem(item);
+            if (item.code() == track17Config.selectedCode()) carrier.setSelectedItem(item);
+        }
+        switching = wasSwitching;
+    }
+
+    private void updateSourceControls() {
+        title.setText("AutoCheck  /  " + sourceName());
+        setTitle("AutoCheck · " + sourceName() + (track17 ? " · " + carrier.getSelectedItem() : "批量查询"));
+        batchNote.setText("每批 " + (sf ? "20" : track17 ? "40" : "10") + " 单  ·  独立保存进度  ·  人工验证");
+        carrier.setVisible(track17); configureCarriers.setVisible(track17);
+        timeZone.setEnabled(!progressOnly());
+        timeZone.setToolTipText(progressOnly() ? "轨迹保留官网返回的原始时区" : "查询轨迹的时间视角");
+        setColumnVisible(table, 3, !progressOnly(), 145);
+        table.getColumnModel().getColumn(4).setPreferredWidth(progressOnly() ? 430 : 190);
+        setColumnVisible(ruleTable, 2, !progressOnly(), 150);
+        setColumnVisible(ruleTable, 5, false, 100);
+        ruleHint.setText(progressOnly()
+            ? "<html>只匹配最新一条物流进度，不判断地点或地区。多个条件满足任一条即匹配。<br>支持包含和精确匹配；编辑后点击“保存并应用”。</html>"
+            : "<html>只匹配最新轨迹：同一条件的地点和物流信息须同时满足；多个条件满足任一条即匹配。<br>字段留空表示不限，支持包含和精确匹配；编辑后点击“保存并应用”。</html>");
+    }
+
+    private static void setColumnVisible(JTable table, int index, boolean visible, int width) {
+        TableColumn column = table.getColumnModel().getColumn(index);
+        column.setMinWidth(visible ? 60 : 0);
+        column.setMaxWidth(visible ? Integer.MAX_VALUE : 0);
+        column.setPreferredWidth(visible ? width : 0);
+        column.setWidth(visible ? width : 0);
+    }
+
+    private void saveWorkspace() throws IOException {
+        List<String> draft = FilesService.parseWaybills(input.getText());
+        saveSettings();
+        files.saveSnapshot(new Snapshot(1, draft, draft.stream().map(results::get).filter(Objects::nonNull).toList()));
+    }
+
+    private void switchWorkspace() {
+        if (switching || running) return;
+        boolean next17 = source.getSelectedIndex() == 1;
+        boolean nextSf = source.getSelectedIndex() == 2;
+        Track17Config.Carrier selected = (Track17Config.Carrier) carrier.getSelectedItem();
+        int code = selected == null ? track17Config.selectedCode() : selected.code();
+        if (sf == nextSf && track17 == next17 && (!next17 || code == track17Config.selectedCode())) return;
+        switching = true;
+        try {
+            saveWorkspace();
+            Track17Config nextConfig = new Track17Config(track17Config.carriers(), code);
+            if (next17) nextConfig.save(rootData);
+            loadWorkspace(next17, nextSf, nextConfig);
+        } catch (Exception e) {
+            source.setSelectedIndex(sf ? 2 : track17 ? 1 : 0);
+            updateCarriers();
+            error(e);
+        } finally { switching = false; }
+    }
+
+    private void loadWorkspace(boolean next17, boolean nextSf, Track17Config config) throws IOException {
+        Path nextData = nextSf ? rootData.resolve("sf") : next17 ? Track17Config.progressDirectory(rootData, config.selectedCode()) : rootData;
+        FilesService nextFiles = new FilesService(nextData);
+        FilesService nextSettings = next17 ? new FilesService(rootData.resolve("17track")) : nextFiles;
+        track17 = next17; sf = nextSf; track17Config = config;
+        data = nextData; files = nextFiles; settingsFiles = nextSettings;
+        table.clearSelection(); resultModel.setRowCount(0); displayed = List.of();
+        results.clear(); waybills = List.of(); input.setText(""); details.setText("选择运单查看完整轨迹。");
+        ruleModel.setRowCount(0); settings = sf ? Settings.sfDefaults() : track17 ? Settings.track17Defaults() : Settings.defaults();
+        search.setText(""); view.setSelectedIndex(0);
+        restore(); updateSourceControls(); rebuild();
+        status.setText("已切换至 " + sourceName() + (track17 ? " / " + carrier.getSelectedItem() : "") + "，进度分别保存");
+    }
+
+    private void editCarriers() {
+        if (running) return;
+        DefaultTableModel model = new DefaultTableModel(new Object[]{"物流公司名称", "公司编码 fc"}, 0);
+        track17Config.carriers().forEach(c -> model.addRow(new Object[]{c.name(), c.code()}));
+        JTable editor = new JTable(model); editor.setRowHeight(30);
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.add(new JLabel("<html>每次查询选择一家物流公司，应用于本次导入的全部单号。<br>不同公司的进度分开保存；编码需与 17TRACK 官网一致。</html>"), BorderLayout.NORTH);
+        JScrollPane scroll = new JScrollPane(editor); scroll.setPreferredSize(new Dimension(520, 220)); panel.add(scroll, BorderLayout.CENTER);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton add = new JButton("添加公司"), remove = new JButton("删除选中公司");
+        add.addActionListener(e -> model.addRow(new Object[]{"", ""}));
+        remove.addActionListener(e -> { if (editor.getSelectedRow() >= 0) model.removeRow(editor.convertRowIndexToModel(editor.getSelectedRow())); });
+        buttons.add(add); buttons.add(remove); panel.add(buttons, BorderLayout.SOUTH);
+        while (JOptionPane.showConfirmDialog(this, panel, "17TRACK 物流公司配置", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+            try {
+                if (editor.isEditing()) editor.getCellEditor().stopCellEditing();
+                List<Track17Config.Carrier> carriers = new ArrayList<>();
+                for (int row = 0; row < model.getRowCount(); row++) {
+                    String name = clean(Objects.toString(model.getValueAt(row, 0), ""));
+                    int code;
+                    try { code = Integer.parseInt(clean(Objects.toString(model.getValueAt(row, 1), ""))); }
+                    catch (NumberFormatException e) { throw new IOException("第 " + (row + 1) + " 行 fc 必须是正整数"); }
+                    carriers.add(new Track17Config.Carrier(name, code));
+                }
+                int code = carriers.stream().anyMatch(c -> c.code() == track17Config.selectedCode())
+                    ? track17Config.selectedCode() : carriers.isEmpty() ? 0 : carriers.get(0).code();
+                Track17Config next = new Track17Config(carriers, code);
+                saveWorkspace();
+                next.save(rootData);
+                switching = true;
+                loadWorkspace(true, false, next);
+                updateCarriers(); updateSourceControls();
+                log("物流公司配置已保存；删除配置不会删除原查询记录");
+                return;
+            } catch (Exception e) { error(e); }
+            finally { switching = false; }
+        }
     }
 
     private void importFile() {
@@ -257,14 +403,15 @@ public final class MainWindow extends JFrame {
         if (ruleTable.isEditing()) ruleTable.getCellEditor().stopCellEditing();
         List<Rule> rules = new ArrayList<>();
         for (int i = 0; i < ruleModel.getRowCount(); i++) {
-            String name = value(i, 1), location = value(i, 2), detail = value(i, 3);
+            String name = value(i, 1), location = progressOnly() ? "" : value(i, 2), detail = value(i, 3);
             boolean enabled = Boolean.TRUE.equals(ruleModel.getValueAt(i, 0));
             if (name.isEmpty()) throw new IOException("第 " + (i + 1) + " 条条件缺少名称");
-            if (enabled && location.isEmpty() && detail.isEmpty()) throw new IOException("条件“" + name + "”至少填写地点或物流信息");
-            rules.add(new Rule(enabled, name, location, detail, "精确".equals(value(i, 4)) ? MatchMode.EXACT : MatchMode.CONTAINS));
+            AreaFilter area = !progressOnly() && ruleModel.getValueAt(i, 5) instanceof AreaFilter selected ? selected : AreaFilter.ANY;
+            if (enabled && location.isEmpty() && detail.isEmpty() && area == AreaFilter.ANY) throw new IOException("条件“" + name + "”请填写" + (progressOnly() ? "物流进度" : "地点或物流信息"));
+            rules.add(new Rule(enabled, name, location, detail, "精确".equals(value(i, 4)) ? MatchMode.EXACT : MatchMode.CONTAINS, area));
         }
         Settings next = new Settings((Integer) interval.getValue(), timeZone.getSelectedIndex() == 1 ? "consigneeView" : "senderView", List.copyOf(rules));
-        files.saveSettings(next);
+        settingsFiles.saveSettings(next);
         settings = next;
     }
     private String value(int row, int col) { return clean(Objects.toString(ruleModel.getValueAt(row, col), "")); }
@@ -292,7 +439,9 @@ public final class MainWindow extends JFrame {
 
     private void execute(List<String> imported, List<String> pending, Map<String, Result> saved, Settings runSettings, BatchRunner.Control runControl) {
         String outcome;
-        try (TrackingGateway gateway = new BrowserGateway(data.resolve("browser-profile"))) {
+        try (TrackingGateway gateway = sf ? new SfGateway(data.resolve("browser-profile")) : track17
+                ? new Track17Gateway(rootData.resolve("17track/browser-profile"), track17Config.selectedCode())
+                : new BrowserGateway(data.resolve("browser-profile"))) {
             new BatchRunner().run(pending, runSettings, gateway, runControl, new BatchRunner.Listener() {
                 public void status(String text) { SwingUtilities.invokeLater(() -> { status.setText(text); log(text); }); }
                 public BatchRunner.Answer verify(TrackingGateway.Reply reply) throws Exception { return verification(reply, runControl); }
@@ -347,10 +496,11 @@ public final class MainWindow extends JFrame {
     private void setRunning(boolean value) {
         running = value; start.setEnabled(!value); resume.setEnabled(!value); input.setEditable(!value);
         importButton.setEnabled(!value); pause.setEnabled(value); stop.setEnabled(value); pause.setText("暂停");
+        source.setEnabled(!value); carrier.setEnabled(!value); configureCarriers.setEnabled(!value);
     }
 
     private void rebuild() {
-        String selected = table.getSelectedRow() >= 0 && !displayed.isEmpty() ? displayed.get(table.convertRowIndexToModel(table.getSelectedRow())) : null;
+        String selected = selectedWaybill();
         List<String> rows = new ArrayList<>();
         String keyword = search.getText().strip().toLowerCase(Locale.ROOT);
         int filter = view.getSelectedIndex();
@@ -362,10 +512,13 @@ public final class MainWindow extends JFrame {
                 || filter == 4 && (result == null || result.state() != QueryState.NO_DATA)
                 || filter == 5 && result != null) continue;
             Event latest = result == null ? null : result.latest();
-            String text = no + " " + (latest == null ? "" : latest.description()) + " " + String.join(" ", matches);
+            String text = no + " " + (latest == null ? "" : progressOnly() ? latest.detail() : latest.description()) + " " + String.join(" ", matches);
             if (!text.toLowerCase(Locale.ROOT).contains(keyword)) continue;
             rows.add(no);
         }
+        table.clearSelection();
+        table.getSelectionModel().setAnchorSelectionIndex(-1);
+        table.getSelectionModel().setLeadSelectionIndex(-1);
         displayed = List.copyOf(rows);
         resultModel.setRowCount(0);
         for (String no : displayed) {
@@ -386,18 +539,23 @@ public final class MainWindow extends JFrame {
     }
 
     private void showDetails() {
-        int selected = table.getSelectedRow();
-        if (selected < 0) return;
-        int index = table.convertRowIndexToModel(selected);
-        if (index >= displayed.size()) return;
-        String no = displayed.get(index);
+        String no = selectedWaybill();
+        if (no == null) return;
         Result result = results.get(no);
         if (result == null) { details.setText(no + "\n待查询"); return; }
         StringBuilder text = new StringBuilder(no).append("  ·  ").append(result.state().label).append("\n");
         if (!clean(result.error()).isEmpty()) text.append("错误：").append(result.error()).append("\n");
         if (result.events().isEmpty()) text.append("暂无物流轨迹\n");
-        for (Event event : result.events()) text.append("\n").append(event.eventTime()).append("  ").append(event.timeZone()).append("\n").append(event.description()).append("\n");
+        for (Event event : result.events()) text.append("\n").append(event.eventTime()).append("  ").append(event.timeZone()).append("\n").append(progressOnly() ? event.detail() : event.description()).append("\n");
         details.setText(text.toString()); details.setCaretPosition(0);
+    }
+
+    private String selectedWaybill() {
+        int row = table.getSelectedRow();
+        if (row < 0 || row >= table.getRowCount()
+                || (table.getRowSorter() != null && row >= table.getRowSorter().getViewRowCount())) return null;
+        int index = table.convertRowIndexToModel(row);
+        return index >= 0 && index < displayed.size() ? displayed.get(index) : null;
     }
 
     private void export(boolean json) {
@@ -410,8 +568,9 @@ public final class MainWindow extends JFrame {
         String suffix = json ? ".json" : ".csv";
         if (!path.toString().toLowerCase(Locale.ROOT).endsWith(suffix)) path = Path.of(path + suffix);
         try {
-            if (json) FilesService.JSON.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), selected);
-            else FilesService.exportCsv(path, selected, settings.rules());
+            if (json && progressOnly()) FilesService.exportProgressJson(path, selected);
+            else if (json) FilesService.JSON.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), selected);
+            else FilesService.exportCsv(path, selected, settings.rules(), progressOnly());
             status.setText("已导出 " + selected.size() + " 条已查询结果：" + path.toAbsolutePath());
         } catch (Exception e) { error(e); }
     }

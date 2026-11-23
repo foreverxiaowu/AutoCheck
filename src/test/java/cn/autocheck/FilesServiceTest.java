@@ -34,6 +34,24 @@ class FilesServiceTest {
         }
     }
 
+    @Test void treatsUnicodeWhitespaceAsSeparatorsWithoutJoiningOrChangingWaybills() {
+        assertEquals(List.of("77122517791544", "0012345", "AB-1234", "TEST123"),
+            FilesService.parseWaybills("\u00a077122517791544\u00a0\r\n0012345\u202fAB-1234\u3000TEST123\t77122517791544"));
+        assertThrows(IllegalArgumentException.class, () -> FilesService.parseWaybills("77122517791544?"));
+    }
+
+    @Test void importsAnExcelTextCellWithTheReportedTrailingNonBreakingSpace() throws Exception {
+        Path xlsx = directory.resolve("nbsp-waybill.xlsx");
+        try (var workbook = new XSSFWorkbook()) {
+            var sheet = workbook.createSheet();
+            sheet.createRow(0).createCell(0).setCellValue("运单号");
+            sheet.createRow(105).createCell(0).setCellValue("77122517791544\u00a0");
+            sheet.createRow(106).createCell(0).setCellValue("0012345");
+            try (var output = Files.newOutputStream(xlsx)) { workbook.write(output); }
+        }
+        assertEquals(List.of("77122517791544", "0012345"), FilesService.importWaybills(xlsx));
+    }
+
     @Test void snapshotsAndRulesRoundTripWithoutLosingTheFullHistory() throws Exception {
         FilesService store = new FilesService(directory);
         List<Result> results = new TrajectoryParser().parse(TrajectoryParserTest.sampleWaybills(), TrajectoryParserTest.sample());
