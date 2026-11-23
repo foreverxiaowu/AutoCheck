@@ -1,0 +1,31 @@
+AutoCheck Windows distribution - third-party components
+
+Eclipse Temurin OpenJDK 17 runtime
+Source and releases: https://adoptium.net/temurin/releases/
+The runtime's original legal directory and release metadata are included in runtime/.
+OpenJDK is licensed under GPL version 2 with the Classpath Exception; individual component notices are in runtime/legal/.
+
+Playwright Java 1.65.1 (including its Windows Node.js driver)
+https://github.com/microsoft/playwright-java
+https://github.com/microsoft/playwright
+Apache License 2.0. Original driver notices are retained in the application JAR.
+
+Playwright Chromium distribution / Chrome for Testing, revision 1255
+Downloaded through the official Playwright browser distribution.
+Original browser files, ABOUT and resources are retained in app/browser/.
+See app/browser/ABOUT, chrome://credits and chrome://terms in the bundled browser for notices and terms.
+
+Apache POI 6.0.0, Apache XMLBeans and Apache Commons dependencies
+https://poi.apache.org/
+Apache License 2.0. Original META-INF notices are retained in the application JAR.
+
+Jackson 2.21.4
+https://github.com/FasterXML/jackson
+Apache License 2.0. Original notices are retained in the application JAR.
+
+Apache Log4j 2.26.1
+https://logging.apache.org/log4j/2.x/
+Apache License 2.0. Original notices are retained in the application JAR.
+
+WiX Toolset 3.14.1 is used only to build the installer; build tools are not shipped as application dependencies.
+https://github.com/wixtoolset/wix3/releases/tag/wix3141rtm

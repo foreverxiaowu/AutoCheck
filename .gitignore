@@ -1,0 +1,8 @@
+/target/
+/data/
+/resolve-ws/
+/dist/
+/packaging/cache/
+*.log
+.idea/
+*.iml
