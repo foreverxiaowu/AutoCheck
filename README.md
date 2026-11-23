@@ -2,6 +2,10 @@
 
 Java 17 桌面程序，导入运单号后每批最多查询 10 单，按各单号的最新物流信息匹配自定义条件。无需搭建数据库或 Web 服务。
 
+**Windows 安装版：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.0.0/AutoCheck-1.0.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.0.0)
+
+安装包已包含 Java 和查询浏览器，适用于 Windows 10/11 的 Intel / AMD 64 位电脑。
+
 ## 启动
 
 面向 Windows 10/11 的 Intel / AMD 64 位电脑，已提供两种自带 Java 和查询浏览器的发行包，目标电脑无需安装 Java、Maven、Chrome 或 Edge：
