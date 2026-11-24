@@ -41,12 +41,7 @@ public final class Main {
     }
 
     static void configureAppearance() throws Exception {
-        for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-            if (info.getName().equals("Nimbus")) { UIManager.setLookAndFeel(info.getClassName()); break; }
-        }
-        Font font = new Font("Microsoft YaHei", Font.PLAIN, 13);
-        for (Object key : UIManager.getDefaults().keySet())
-            if (UIManager.get(key) instanceof Font) UIManager.put(key, font);
+        UiTheme.install();
     }
 
     private static void fail(Exception e) {

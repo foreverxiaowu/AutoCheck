@@ -1,0 +1,138 @@
+{
+  "Payload": [
+    {
+      "ConsignmentNo": "PTYY00000006580",
+      "ArticleNos": "PTYY00000006580",
+      "ArticleCount": 1,
+      "Departure": "Frankfurt HE",
+      "Destination": "江苏省 苏州市",
+      "Status": "快件已领取，收件人在[菜鸟驿站](苏州玉景花园一区17栋店)取件，如有疑问请联系站点：[电话省略]，如遇物流问题，请致电专属客服95554。",
+      "Details": [
+        {
+          "DateString": "2026-11-11 08:10",
+          "Place": "Frankfurt HE Germany",
+          "Message": "Shipment information received.",
+          "PositionCode": 1
+        },
+        {
+          "DateString": "2026-11-11 08:10",
+          "Place": "Frankfurt HE Germany",
+          "Message": "Shipment information processed.",
+          "PositionCode": 3
+        },
+        {
+          "DateString": "2026-11-11 16:18",
+          "Place": "Frankfurt HE Germany",
+          "Message": "Package picked up.",
+          "PositionCode": 5
+        },
+        {
+          "DateString": "2026-11-12 10:07",
+          "Place": "Frankfurt HE Germany",
+          "Message": "Package arrived at warehouse.",
+          "PositionCode": 7
+        },
+        {
+          "DateString": "2026-11-12 10:07",
+          "Place": "Frankfurt HE Germany",
+          "Message": "In transit to airport.",
+          "PositionCode": 9
+        },
+        {
+          "DateString": "2026-11-13 16:28",
+          "Place": "法兰克福",
+          "Message": "Departed Facility in 法兰克福",
+          "PositionCode": 50
+        },
+        {
+          "DateString": "2026-11-14 08:42",
+          "Place": "重庆",
+          "Message": "【中国】干线航班已到达 [中国]",
+          "PositionCode": 51
+        },
+        {
+          "DateString": "2026-11-16 08:35",
+          "Place": "重庆",
+          "Message": "【中国】包裹清关中",
+          "PositionCode": 52
+        },
+        {
+          "DateString": "2026-11-17 08:35",
+          "Place": "重庆",
+          "Message": "【中国】包裹清关中，请您耐心等候",
+          "PositionCode": 53
+        },
+        {
+          "DateString": "2026-11-17 08:35",
+          "Place": "重庆",
+          "Message": "国内转运公司：圆通 单号：YT2550767274280",
+          "PositionCode": 54
+        },
+        {
+          "DateString": "2026-11-17 09:58",
+          "Place": "重庆市 江北区",
+          "Message": "您的快件在【重庆市江北区港城】已揽收，揽收人: 尧玉珠（[电话省略]）【物流问题请致电（专属热线:95554）更快解决】",
+          "PositionCode": 100
+        },
+        {
+          "DateString": "2026-11-17 09:59",
+          "Place": "重庆市 江北区",
+          "Message": "您的快件离开【重庆市江北区港城】，已发往【重庆转运中心】",
+          "PositionCode": 101
+        },
+        {
+          "DateString": "2026-11-17 18:11",
+          "Place": "重庆市 渝北区",
+          "Message": "您的快件已经到达【重庆转运中心】【物流问题请致电（专属热线:95554）更快解决】",
+          "PositionCode": 102
+        },
+        {
+          "DateString": "2026-11-17 19:30",
+          "Place": "重庆市 渝北区",
+          "Message": "您的快件离开【重庆转运中心】，已发往【苏州转运中心】。预计【11月19日】到达【无锡市】，因运输距离较远，预计将在【19日晚上】为您更新快件状态，请您放心！",
+          "PositionCode": 103
+        },
+        {
+          "DateString": "2026-11-19 03:18",
+          "Place": "无锡市 新吴区",
+          "Message": "您的快件已经到达【苏州转运中心】【物流问题请致电（专属热线:95554）更快解决】",
+          "PositionCode": 104
+        },
+        {
+          "DateString": "2026-11-19 04:35",
+          "Place": "无锡市 新吴区",
+          "Message": "您的快件离开【苏州转运中心】，已发往【江苏省苏州市虎丘区金山】",
+          "PositionCode": 105
+        },
+        {
+          "DateString": "2026-11-19 07:46",
+          "Place": "苏州市 虎丘区",
+          "Message": "您的快件已经到达【江苏省苏州市虎丘区金山】【物流问题请致电（专属热线:95554）更快解决】",
+          "PositionCode": 106
+        },
+        {
+          "DateString": "2026-11-19 07:47",
+          "Place": "苏州市 虎丘区",
+          "Message": "【江苏省苏州市虎丘区金山】的霍艳锋（[电话省略]）正在为您派件（95161和18521号段的上海号码为圆通快递员专属号码，请放心接听。如遇物流问题，请联系快递员为您解决，或致电专属客服95554）",
+          "PositionCode": 107
+        },
+        {
+          "DateString": "2026-11-19 11:44",
+          "Place": "苏州市 虎丘区",
+          "Message": "您好，快件已到达[菜鸟驿站](苏州玉景花园一区17栋店)，请及时取件，如有取件码问题或找不到包裹等问题，请联系站点：[电话省略]，或致电专属客服95554。感谢使用圆通速递，期待再次为您服务！",
+          "PositionCode": 108
+        },
+        {
+          "DateString": "2026-11-24 12:32",
+          "Place": "苏州市 虎丘区",
+          "Message": "快件已领取，收件人在[菜鸟驿站](苏州玉景花园一区17栋店)取件，如有疑问请联系站点：[电话省略]，如遇物流问题，请致电专属客服95554。",
+          "PositionCode": 109
+        }
+      ]
+    }
+  ],
+  "Total": 1,
+  "Status": 0,
+  "Message": "",
+  "Error": ""
+}

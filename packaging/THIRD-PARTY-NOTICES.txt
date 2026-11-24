@@ -1,5 +1,10 @@
 AutoCheck Windows distribution - third-party components
 
+FlatLaf 3.7
+https://www.formdev.com/flatlaf/
+https://github.com/JFormDesigner/FlatLaf
+Apache License 2.0. Modern Swing look and feel; original license notices are retained in the application JAR.
+
 Eclipse Temurin OpenJDK 17 runtime
 Source and releases: https://adoptium.net/temurin/releases/
 The runtime's original legal directory and release metadata are included in runtime/.

@@ -1,0 +1,5 @@
+Created with the built-in image_gen tool for AutoCheck.
+Source: src/main/resources/cn/autocheck/app-icon.png
+Windows multi-resolution output: packaging/autocheck.ico
+Prompt: Use case: logo-brand. Asset type: production Windows desktop application icon for AutoCheck, a batch parcel tracking tool. Create one polished icon only, centered, square canvas. A blue-to-violet rounded-square tile with genuinely transparent space outside its rounded corners, filling about 92 percent of the canvas. On the tile, a bold white simplified parcel/box symbol integrated with a sweeping mint-teal checkmark, suggesting reliable parcel tracking and completed verification. Clean modern geometric design matching a blue-violet desktop dashboard, subtle restrained dimensional depth, crisp silhouette and thick details that remain recognizable at 16, 32, 48 and 256 pixels. Strong contrast, balanced generous inner padding. No words, letters, numbers, captions, carrier logos, watermark, border frame, scene, mockup, extra variants, or background behind the icon. The output itself is the ready-to-use icon artwork.
+transparent_background: true

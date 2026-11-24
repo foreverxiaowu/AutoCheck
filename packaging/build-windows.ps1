@@ -22,7 +22,7 @@ if (-not $SkipBuild) {
     & mvn -q package
     if ($LASTEXITCODE -ne 0) { throw 'Maven build failed' }
 }
-$jar = Join-Path $projectRoot 'target/autocheck-1.1.2.jar'
+$jar = Join-Path $projectRoot 'target/autocheck-1.2.0.jar'
 if (-not (Test-Path -LiteralPath $jar)) { throw "Missing application JAR: $jar" }
 
 # Only Eclipse Temurin's OpenJDK runtime is redistributed, with its legal directory intact.
@@ -77,10 +77,12 @@ Copy-Item -LiteralPath $browser -Destination (Join-Path $inputDirectory 'browser
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '使用说明.txt'),(Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.txt') -Destination $inputDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot 'examples/waybills.txt') -Destination (Join-Path $inputDirectory '示例运单号.txt')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'examples/17track-waybills.txt'),(Join-Path $projectRoot 'examples/sf-waybills.txt') -Destination $inputDirectory
+Copy-Item -LiteralPath (Join-Path $projectRoot 'examples/ewe-waybills.txt') -Destination $inputDirectory
+Copy-Item -LiteralPath (Join-Path $projectRoot 'examples/4px-waybills.txt') -Destination $inputDirectory
 
 & (Join-Path $PSScriptRoot 'new-icon.ps1')
 $icon = Join-Path $PSScriptRoot 'autocheck.ico'
-& jpackage --type app-image --name AutoCheck --app-version 1.1.2 --vendor AutoCheck --description 'YTO, 17TRACK and SF International batch tracking' --input $inputDirectory --main-jar autocheck-1.1.2.jar --main-class cn.autocheck.Main --runtime-image $runtime --dest $imageDirectory --icon $icon --java-options '-Dfile.encoding=UTF-8'
+& jpackage --type app-image --name AutoCheck --app-version 1.2.0 --vendor AutoCheck --description 'Multi-carrier batch tracking: YTO, 17TRACK, SF, EWE and 4PX' --input $inputDirectory --main-jar autocheck-1.2.0.jar --main-class cn.autocheck.Main --runtime-image $runtime --dest $imageDirectory --icon $icon --java-options '-Dfile.encoding=UTF-8'
 if ($LASTEXITCODE -ne 0) { throw 'jpackage application image failed' }
 $image = Join-Path $imageDirectory 'AutoCheck'
 
@@ -115,12 +117,12 @@ $env:PATH = $wix + [IO.Path]::PathSeparator + $oldPath
 try {
     # Machine-wide MSI requests elevation for install/uninstall, including rollback-file security.
     # Keep the upgrade family, but old per-user installations must be removed in their original context.
-    & jpackage --type exe --name AutoCheck --app-version 1.1.2 --vendor AutoCheck --app-image $image --dest $stagingDistribution --install-dir AutoCheckApp --win-dir-chooser --win-menu --win-menu-group AutoCheck --win-shortcut --win-shortcut-prompt --win-upgrade-uuid '48a785ab-b688-4c8b-a090-a0b3ed5cfb3a' --temp (Join-Path $workRoot 'installer')
+    & jpackage --type exe --name AutoCheck --app-version 1.2.0 --vendor AutoCheck --app-image $image --icon $icon --dest $stagingDistribution --install-dir AutoCheckApp --win-dir-chooser --win-menu --win-menu-group AutoCheck --win-shortcut --win-shortcut-prompt --win-upgrade-uuid '48a785ab-b688-4c8b-a090-a0b3ed5cfb3a' --temp (Join-Path $workRoot 'installer')
     if ($LASTEXITCODE -ne 0) { throw 'jpackage Windows installer failed' }
 } finally { $env:PATH = $oldPath }
 
-$portableZip = Join-Path $stagingDistribution 'AutoCheck-1.1.2-Windows-x64-Portable.zip'
+$portableZip = Join-Path $stagingDistribution 'AutoCheck-1.2.0-Windows-x64-Portable.zip'
 Compress-Archive -LiteralPath $image -DestinationPath $portableZip -CompressionLevel Optimal -Force
-Copy-Item -LiteralPath (Join-Path $stagingDistribution 'AutoCheck-1.1.2.exe'),$portableZip -Destination $distribution -Force
+Copy-Item -LiteralPath (Join-Path $stagingDistribution 'AutoCheck-1.2.0.exe'),$portableZip -Destination $distribution -Force
 Copy-Item -LiteralPath $report -Destination (Join-Path $distribution 'distribution-check.json')
 & (Join-Path $PSScriptRoot 'finalize-windows.ps1')

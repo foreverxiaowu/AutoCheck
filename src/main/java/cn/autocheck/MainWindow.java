@@ -20,12 +20,12 @@ import cn.autocheck.Models.Event;
 import static cn.autocheck.Models.*;
 
 public final class MainWindow extends JFrame {
-    private static final Color NAVY = new Color(25, 44, 65);
+    private static final Color NAVY = UiTheme.TEXT;
     private FilesService files;
     private FilesService settingsFiles;
     private Path data;
     private final Path rootData;
-    private final JComboBox<String> source = new JComboBox<>(new String[]{"圆通国际", "17TRACK", "顺丰国际"});
+    private final JComboBox<String> source = new JComboBox<>(new String[]{"圆通国际", "17TRACK", "顺丰国际", "EWE", "4PX"});
     private final JComboBox<Track17Config.Carrier> carrier = new JComboBox<>();
     private final JButton configureCarriers = new JButton("物流公司配置");
     private final JLabel title = new JLabel();
@@ -34,15 +34,23 @@ public final class MainWindow extends JFrame {
     private Track17Config track17Config = Track17Config.defaults();
     private boolean track17;
     private boolean sf;
-    private boolean progressOnly() { return track17 || sf; }
-    private String sourceName() { return sf ? "顺丰国际" : track17 ? "17TRACK" : "圆通国际"; }
+    private boolean ewe;
+    private boolean fpx;
+    private EweRegions eweRegions = EweRegions.defaults();
+    private List<String> matches(Result result) {
+        return ewe ? matchedRules(result, settings.rules(), eweRegions::classify) : matchedRules(result, settings.rules());
+    }
+    private boolean progressOnly() { return track17 || sf || fpx; }
+    private String sourceName() { return fpx ? "4PX" : ewe ? "EWE" : sf ? "顺丰国际" : track17 ? "17TRACK" : "圆通国际"; }
     private boolean switching;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> new Thread(r, "tracking-batch-worker"));
     private final JTextArea input = new JTextArea();
     private final JTextArea details = new JTextArea();
+    private JScrollPane detailPane;
     private final JTextArea logs = new JTextArea();
     private final JLabel status = new JLabel("就绪 · 导入或粘贴运单号后开始查询");
     private final JLabel summary = new JLabel();
+    private final JLabel totalValue = new JLabel("0"), completedValue = new JLabel("0"), matchedValue = new JLabel("0"), failedValue = new JLabel("0");
     private final JProgressBar progress = new JProgressBar();
     private final JButton start = new JButton("开始全部查询");
     private final JButton resume = new JButton("继续未完成 / 失败项");
@@ -50,6 +58,11 @@ public final class MainWindow extends JFrame {
     private final JButton stop = new JButton("停止");
     private final JButton importButton = new JButton("导入 TXT / CSV / Excel");
     private final JTextField search = new JTextField(15);
+    private final JLabel regionLabel = new JLabel("地区");
+    private final JTextField regionSearch = new JTextField(7);
+    private final JPanel regionToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 7, 0));
+    private final JComboBox<AreaFilter> areaView = new JComboBox<>(AreaFilter.values());
+    private final JButton configureRegions = new JButton("国内 / 境外关键词配置");
     private final JComboBox<String> view = new JComboBox<>(new String[]{"全部运单", "匹配条件", "未匹配条件", "查询失败", "暂无轨迹", "待查询"});
     private final JSpinner interval = new JSpinner(new SpinnerNumberModel(3, 1, 120, 1));
     private final JComboBox<String> timeZone = new JComboBox<>(new String[]{"寄件人视角", "收件人视角"});
@@ -57,10 +70,10 @@ public final class MainWindow extends JFrame {
         @Override public Class<?> getColumnClass(int column) { return column == 0 ? Boolean.class : column == 5 ? AreaFilter.class : String.class; }
     };
     private final JTable ruleTable = new JTable(ruleModel);
-    private final DefaultTableModel resultModel = new DefaultTableModel(new Object[]{"运单号", "查询状态", "最新时间", "最新地点", "物流进度", "匹配条件"}, 0) {
+    private final DefaultTableModel resultModel = new DefaultTableModel(new Object[]{"运单号", "查询状态", "最新时间", "最新地点", "物流进度", "匹配条件", "位置分类"}, 0) {
         @Override public boolean isCellEditable(int row, int column) { return false; }
     };
-    private final JTable table = new JTable(resultModel);
+    private final JTable table = new ResponsiveTable(resultModel, 4);
     private final Map<String, Result> results = new LinkedHashMap<>();
     private List<String> waybills = List.of();
     private List<String> displayed = List.of();
@@ -71,6 +84,7 @@ public final class MainWindow extends JFrame {
 
     public MainWindow(Path data) throws IOException {
         super("AutoCheck · 圆通国际批量查询");
+        setIconImages(AppIcons.images());
         this.rootData = data;
         this.data = data;
         this.files = new FilesService(data);
@@ -79,8 +93,8 @@ public final class MainWindow extends JFrame {
         catch (Exception e) { log("物流公司配置读取失败，暂用默认配置：" + e.getMessage()); }
         updateCarriers();
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        setSize(1320, 900);
-        setMinimumSize(new Dimension(1080, 720));
+        setSize(1400, 960);
+        setMinimumSize(new Dimension(1180, 800));
         setLocationRelativeTo(null);
         build();
         restore();
@@ -100,83 +114,118 @@ public final class MainWindow extends JFrame {
     }
 
     private void build() {
-        JPanel root = new JPanel(new BorderLayout(0, 12));
-        root.setBorder(new EmptyBorder(16, 18, 14, 18));
+        JPanel root = new JPanel(new BorderLayout(0, 16));
+        root.setBackground(UiTheme.CANVAS);
+        root.setBorder(new EmptyBorder(20, 22, 16, 22));
         setContentPane(root);
-        JPanel header = new JPanel(new BorderLayout());
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 25));
-        title.setForeground(NAVY);
-        header.add(title, BorderLayout.WEST);
-        batchNote.setForeground(new Color(90, 105, 120));
-        header.add(batchNote, BorderLayout.EAST);
-        JPanel sources = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
-        source.setPreferredSize(new Dimension(125, 28));
-        carrier.setPreferredSize(new Dimension(240, 28));
-        sources.add(new JLabel("查询平台")); sources.add(source);
+        JPanel header = UiTheme.hero();
+        header.setBorder(new EmptyBorder(19, 24, 18, 24));
+        JPanel brand = new JPanel(new BorderLayout()); brand.setOpaque(false);
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 27)); title.setForeground(Color.WHITE);
+        brand.add(title, BorderLayout.WEST);
+        batchNote.setForeground(new Color(0xE1E5FF)); brand.add(batchNote, BorderLayout.EAST);
+        header.add(brand, BorderLayout.NORTH);
+        JPanel sources = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)); sources.setOpaque(false);
+        source.setPreferredSize(new Dimension(150, 36));
+        carrier.setPreferredSize(new Dimension(240, 36));
+        sources.add(UiTheme.label("查询平台", 13, Font.PLAIN, Color.WHITE)); sources.add(source);
         sources.add(carrier); sources.add(configureCarriers);
-        header.add(sources, BorderLayout.SOUTH);
+        header.add(sources, BorderLayout.CENTER);
         root.add(header, BorderLayout.NORTH);
 
-        JPanel sidebar = new JPanel(new BorderLayout(0, 10));
-        sidebar.setBorder(BorderFactory.createTitledBorder("01  导入运单"));
-        sidebar.setPreferredSize(new Dimension(270, 0));
-        JPanel hint = new JPanel(new GridLayout(0, 1, 0, 5));
+        JPanel sidebar = UiTheme.card(new BorderLayout(0, 14));
+        sidebar.setBorder(new EmptyBorder(19, 17, 17, 17));
+        sidebar.setPreferredSize(new Dimension(280, 0));
+        JPanel hint = new JPanel(new GridLayout(0, 1, 0, 8));
+        hint.add(UiTheme.label("导入运单", 19, Font.BOLD, NAVY));
+        hint.add(UiTheme.label("粘贴单号，或从文件批量导入", 12, Font.PLAIN, UiTheme.MUTED));
+        UiTheme.button(importButton, UiTheme.BLUE_TINT, UiTheme.BLUE);
         hint.add(importButton);
-        hint.add(new JLabel("每行一个；也支持逗号、空格分隔"));
-        hint.add(new JLabel("Excel：读取首个工作表的 A 列"));
-        hint.add(new JLabel("单号自动去重，保留原顺序"));
+        hint.add(UiTheme.label("每行一个，自动去重 · Excel 读取 A 列", 11, Font.PLAIN, UiTheme.MUTED));
         sidebar.add(hint, BorderLayout.NORTH);
         input.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
-        sidebar.add(new JScrollPane(input), BorderLayout.CENTER);
-        JPanel actions = new JPanel(new GridLayout(0, 1, 0, 7));
-        start.setBackground(new Color(39, 103, 167)); start.setForeground(Color.WHITE);
+        input.setBackground(new Color(0xF8F9FE)); input.setMargin(new Insets(12, 10, 12, 10));
+        JScrollPane inputPane = new JScrollPane(input);
+        inputPane.setBorder(BorderFactory.createLineBorder(new Color(0xE4E8F5)));
+        sidebar.add(inputPane, BorderLayout.CENTER);
+        JPanel actions = new JPanel(new GridLayout(0, 1, 0, 9));
+        UiTheme.button(start, UiTheme.BLUE, Color.WHITE);
+        start.setFont(start.getFont().deriveFont(Font.BOLD));
+        UiTheme.button(resume, UiTheme.TEAL_TINT, UiTheme.TEAL);
+        UiTheme.button(pause, UiTheme.AMBER_TINT, UiTheme.AMBER);
+        UiTheme.button(stop, UiTheme.ROSE_TINT, UiTheme.ROSE);
         actions.add(start); actions.add(resume);
         JPanel taskActions = new JPanel(new GridLayout(1, 2, 7, 0));
         taskActions.add(pause); taskActions.add(stop);
         actions.add(taskActions);
-        JLabel hint2 = new JLabel("<html>中断后点击“继续”跳过已完成项。<br>“开始全部查询”会刷新所有单号。</html>");
+        JLabel hint2 = new JLabel("<html>进度自动保存，随时继续查询。<br>“开始全部查询”会刷新所有单号。</html>");
+        hint2.setFont(hint2.getFont().deriveFont(11f)); hint2.setForeground(UiTheme.MUTED);
         hint2.setBorder(new EmptyBorder(8, 3, 5, 3));
         actions.add(hint2);
         sidebar.add(actions, BorderLayout.SOUTH);
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("02  查询结果", resultsPanel());
-        tabs.addTab("03  筛选条件与设置", rulesPanel());
+        tabs.addTab("查询结果", resultsPanel());
+        tabs.addTab("筛选条件与设置", rulesPanel());
         logs.setEditable(false); logs.setLineWrap(true);
+        logs.setBackground(new Color(0x25334E)); logs.setForeground(new Color(0xD1E4F7));
+        logs.setFont(new Font("Microsoft YaHei", Font.PLAIN, 13)); logs.setMargin(new Insets(16, 18, 16, 18));
         tabs.addTab("运行日志", new JScrollPane(logs));
         JSplitPane content = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sidebar, tabs);
-        content.setDividerLocation(280); content.setResizeWeight(0);
+        content.setDividerLocation(280); content.setResizeWeight(0); content.setDividerSize(16);
+        content.setBorder(BorderFactory.createEmptyBorder()); content.setOpaque(false);
         root.add(content, BorderLayout.CENTER);
 
-        JPanel footer = new JPanel(new BorderLayout(15, 0));
-        status.setBorder(new EmptyBorder(4, 2, 0, 0));
+        JPanel footer = UiTheme.card(new BorderLayout(15, 0));
+        footer.setBorder(new EmptyBorder(10, 16, 10, 16));
+        status.setForeground(UiTheme.MUTED);
         footer.add(status, BorderLayout.CENTER);
-        progress.setPreferredSize(new Dimension(220, 23)); progress.setStringPainted(true);
+        progress.setPreferredSize(new Dimension(200, 20)); progress.setStringPainted(true);
         footer.add(progress, BorderLayout.EAST);
         root.add(footer, BorderLayout.SOUTH);
         pause.setEnabled(false); stop.setEnabled(false);
     }
 
     private JPanel resultsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBorder(new EmptyBorder(12, 10, 10, 10));
-        JPanel top = new JPanel(new BorderLayout(0, 10));
-        summary.setFont(summary.getFont().deriveFont(Font.BOLD, 15));
-        summary.setForeground(NAVY); top.add(summary, BorderLayout.NORTH);
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBorder(new EmptyBorder(17, 16, 14, 16));
+        JPanel top = new JPanel(new BorderLayout(0, 14));
+        JPanel statistics = new JPanel(new GridLayout(1, 4, 12, 0));
+        statistics.add(UiTheme.statistic("全部运单", totalValue, UiTheme.BLUE, UiTheme.BLUE_TINT));
+        statistics.add(UiTheme.statistic("已查询", completedValue, UiTheme.TEAL, UiTheme.TEAL_TINT));
+        statistics.add(UiTheme.statistic("条件匹配", matchedValue, UiTheme.AMBER, UiTheme.AMBER_TINT));
+        statistics.add(UiTheme.statistic("查询失败", failedValue, UiTheme.ROSE, UiTheme.ROSE_TINT));
+        top.add(statistics, BorderLayout.NORTH);
+        summary.setFont(summary.getFont().deriveFont(12f)); summary.setForeground(UiTheme.MUTED);
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 7, 0));
-        view.setPreferredSize(new Dimension(145, 28));
-        search.setPreferredSize(new Dimension(135, 28));
+        view.setPreferredSize(new Dimension(145, 34));
+        search.setPreferredSize(new Dimension(155, 34));
+        search.putClientProperty("JTextField.placeholderText", "单号 / 物流信息");
         search.setColumns(10);
         toolbar.add(view); toolbar.add(new JLabel("搜索")); toolbar.add(search);
+        areaView.setPreferredSize(new Dimension(125, 28));
+        regionToolbar.add(new JLabel("位置分类")); regionToolbar.add(areaView);
+        regionToolbar.add(regionLabel); regionToolbar.add(regionSearch); regionSearch.setName("regionSearch");
+        regionToolbar.add(configureRegions); areaView.setName("areaView");
+        configureRegions.setName("configureRegions");
+        areaView.setToolTipText("国内按中国大陆判断；境外包含港澳台；只判断最新轨迹地点，无法确认时归为未知");
+        regionSearch.setToolTipText("按最新轨迹的 Place 包含匹配，例如：重庆、苏州、Frankfurt");
         view.setName("resultView"); source.setName("querySource"); carrier.setName("carrier");
         JButton csv = new JButton("导出当前列表"); toolbar.add(csv);
         JButton json = new JButton("导出完整轨迹"); toolbar.add(json);
+        UiTheme.button(csv, UiTheme.TEAL_TINT, UiTheme.TEAL);
+        UiTheme.button(json, UiTheme.BLUE_TINT, UiTheme.BLUE);
         csv.addActionListener(e -> export(false)); json.addActionListener(e -> export(true));
-        top.add(toolbar, BorderLayout.CENTER); panel.add(top, BorderLayout.NORTH);
-        table.setRowHeight(31); table.setAutoCreateRowSorter(true);
+        JPanel filters = new JPanel(new BorderLayout(0, 10));
+        filters.add(toolbar, BorderLayout.NORTH); filters.add(regionToolbar, BorderLayout.CENTER);
+        filters.add(summary, BorderLayout.SOUTH); top.add(filters, BorderLayout.CENTER); panel.add(top, BorderLayout.NORTH);
+        table.setRowHeight(42); table.setAutoCreateRowSorter(true);
+        table.setIntercellSpacing(new Dimension(0, 1)); table.setShowVerticalLines(false);
+        table.getTableHeader().setReorderingAllowed(false);
+        table.getTableHeader().setFont(table.getTableHeader().getFont().deriveFont(Font.BOLD, 12f));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        int[] widths = {145, 85, 155, 145, 190, 120};
+        int[] widths = {180, 100, 170, 145, 260, 130, 100};
         for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean selected, boolean focus, int row, int col) {
@@ -184,25 +233,35 @@ public final class MainWindow extends JFrame {
                 if (!selected) {
                     int index = t.convertRowIndexToModel(row);
                     Result result = results.get(displayed.get(index));
-                    boolean match = result != null && !matchedRules(result, settings.rules()).isEmpty();
-                    setBackground(match ? new Color(231, 244, 235) : (row % 2 == 0 ? Color.WHITE : new Color(246, 248, 251)));
-                    setForeground(result != null && result.state() == QueryState.FAILED ? new Color(170, 55, 55) : NAVY);
+                    boolean match = result != null && !matches(result).isEmpty();
+                    setBackground(row % 2 == 0 ? Color.WHITE : new Color(0xFAFBFE));
+                    setForeground(NAVY);
+                    if (col == 1) {
+                        if (result == null) { setBackground(UiTheme.BLUE_TINT); setForeground(UiTheme.BLUE); }
+                        else if (result.state() == QueryState.FAILED) { setBackground(UiTheme.ROSE_TINT); setForeground(UiTheme.ROSE); }
+                        else if (result.state() == QueryState.NO_DATA) { setBackground(UiTheme.AMBER_TINT); setForeground(UiTheme.AMBER); }
+                        else { setBackground(UiTheme.TEAL_TINT); setForeground(UiTheme.TEAL); }
+                    } else if (col == 5 && match) { setBackground(UiTheme.AMBER_TINT); setForeground(UiTheme.AMBER); }
                 }
                 setToolTipText(value == null ? "" : value.toString());
-                setBorder(new EmptyBorder(2, 6, 2, 6));
+                setBorder(new EmptyBorder(4, 10, 4, 10));
+                setFont(t.getFont().deriveFont(col == 0 ? Font.BOLD : Font.PLAIN));
                 return this;
             }
         });
         details.setEditable(false); details.setLineWrap(true); details.setWrapStyleWord(true);
-        details.setMargin(new Insets(10, 12, 10, 12));
+        details.setFont(details.getFont().deriveFont(13f));
+        details.setBackground(new Color(0xF7F9FE));
+        details.setMargin(new Insets(16, 18, 16, 18));
         details.setText("选择一条运单，查看完整物流轨迹。筛选只检查每个单号的最新一条轨迹。");
-        JScrollPane detailPane = new JScrollPane(details);
+        detailPane = new JScrollPane(details);
         detailPane.setBorder(BorderFactory.createTitledBorder("完整轨迹（按时间倒序，保留原时区）"));
-        detailPane.setMinimumSize(new Dimension(0, 145));
+        detailPane.setMinimumSize(new Dimension(0, 110));
         JScrollPane tablePane = new JScrollPane(table);
-        tablePane.setMinimumSize(new Dimension(0, 150));
+        tablePane.setMinimumSize(new Dimension(0, 90));
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tablePane, detailPane);
-        split.setResizeWeight(0.65); split.setDividerLocation(340);
+        split.setResizeWeight(0.60); split.setDividerLocation(245); split.setDividerSize(12);
+        split.setBorder(BorderFactory.createEmptyBorder());
         panel.add(split, BorderLayout.CENTER);
         return panel;
     }
@@ -211,7 +270,9 @@ public final class MainWindow extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setBorder(new EmptyBorder(15, 12, 12, 12));
         panel.add(ruleHint, BorderLayout.NORTH);
-        ruleTable.setRowHeight(34);
+        ruleHint.setOpaque(true); ruleHint.setBackground(UiTheme.BLUE_TINT); ruleHint.setForeground(UiTheme.BLUE);
+        ruleHint.setBorder(new EmptyBorder(12, 14, 12, 14));
+        ruleTable.setRowHeight(40);
         ruleTable.getColumnModel().getColumn(0).setMaxWidth(60);
         ruleTable.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(new JComboBox<>(new String[]{"包含", "精确"})));
         ruleTable.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JComboBox<>(AreaFilter.values())));
@@ -219,6 +280,9 @@ public final class MainWindow extends JFrame {
         JPanel bottom = new JPanel(new GridLayout(0, 1, 0, 10));
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton add = new JButton("添加条件"), remove = new JButton("删除选中"), save = new JButton("保存并应用");
+        UiTheme.button(add, UiTheme.BLUE_TINT, UiTheme.BLUE);
+        UiTheme.button(remove, UiTheme.ROSE_TINT, UiTheme.ROSE);
+        UiTheme.button(save, UiTheme.BLUE, Color.WHITE);
         add.addActionListener(e -> ruleModel.addRow(new Object[]{true, "新条件", "", "", "包含", AreaFilter.ANY}));
         remove.addActionListener(e -> { if (ruleTable.getSelectedRow() >= 0) ruleModel.removeRow(ruleTable.convertRowIndexToModel(ruleTable.getSelectedRow())); });
         save.addActionListener(e -> { try { saveSettings(); rebuild(); log("筛选条件已保存并应用"); } catch (Exception ex) { error(ex); } });
@@ -233,6 +297,12 @@ public final class MainWindow extends JFrame {
     }
 
     private void restore() {
+        if (ewe) {
+            try {
+                EweRegions saved = files.loadEweRegions();
+                eweRegions = saved == null ? EweRegions.defaults() : saved;
+            } catch (Exception e) { eweRegions = EweRegions.defaults(); log("EWE 地区关键词读取失败，暂用默认值：" + e.getMessage()); }
+        }
         try {
             Settings saved = settingsFiles.loadSettings();
             if (saved != null && saved.rules() != null) settings = saved;
@@ -257,6 +327,8 @@ public final class MainWindow extends JFrame {
         source.addActionListener(e -> switchWorkspace());
         carrier.addActionListener(e -> { if (track17) switchWorkspace(); });
         configureCarriers.addActionListener(e -> editCarriers());
+        configureRegions.addActionListener(e -> editRegions());
+        areaView.addActionListener(e -> rebuild());
         start.addActionListener(e -> begin(false)); resume.addActionListener(e -> begin(true));
         importButton.addActionListener(e -> importFile());
         stop.addActionListener(e -> { control.cancel(); stop.setEnabled(false); pause.setEnabled(false); status.setText("正在停止，将保留已返回的结果…"); });
@@ -265,11 +337,13 @@ public final class MainWindow extends JFrame {
             else { control.pause(); pause.setText("继续"); status.setText("已请求暂停，将在当前请求结束后暂停"); }
         });
         view.addActionListener(e -> rebuild());
-        search.getDocument().addDocumentListener(new DocumentListener() {
+        DocumentListener filterListener = new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { rebuild(); }
             public void removeUpdate(DocumentEvent e) { rebuild(); }
             public void changedUpdate(DocumentEvent e) { rebuild(); }
-        });
+        };
+        search.getDocument().addDocumentListener(filterListener);
+        regionSearch.getDocument().addDocumentListener(filterListener);
         table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) showDetails(); });
     }
 
@@ -287,16 +361,21 @@ public final class MainWindow extends JFrame {
     private void updateSourceControls() {
         title.setText("AutoCheck  /  " + sourceName());
         setTitle("AutoCheck · " + sourceName() + (track17 ? " · " + carrier.getSelectedItem() : "批量查询"));
-        batchNote.setText("每批 " + (sf ? "20" : track17 ? "40" : "10") + " 单  ·  独立保存进度  ·  人工验证");
+        batchNote.setText("每批 " + (sf ? "20" : track17 ? "40" : "10") + " 单  ·  独立保存进度" + (fpx ? "  ·  物流条件筛选" : ewe ? "  ·  地区筛选" : "  ·  人工验证"));
         carrier.setVisible(track17); configureCarriers.setVisible(track17);
-        timeZone.setEnabled(!progressOnly());
-        timeZone.setToolTipText(progressOnly() ? "轨迹保留官网返回的原始时区" : "查询轨迹的时间视角");
+        regionToolbar.setVisible(ewe);
+        regionLabel.setVisible(ewe); regionSearch.setVisible(ewe);
+        timeZone.setEnabled(!progressOnly() && !ewe);
+        timeZone.setToolTipText(ewe ? "EWE 未提供时区，保留官网原始时间" : progressOnly() ? "轨迹保留官网返回的原始时区" : "查询轨迹的时间视角");
         setColumnVisible(table, 3, !progressOnly(), 145);
-        table.getColumnModel().getColumn(4).setPreferredWidth(progressOnly() ? 430 : 190);
+        table.getColumnModel().getColumn(4).setPreferredWidth(progressOnly() ? 320 : ewe ? 200 : 260);
+        setColumnVisible(table, 6, ewe, 100);
+        detailPane.setBorder(BorderFactory.createTitledBorder(ewe ? "完整轨迹（按原始时间倒序，接口未提供时区）" : "完整轨迹（按时间倒序，保留原时区）"));
         setColumnVisible(ruleTable, 2, !progressOnly(), 150);
-        setColumnVisible(ruleTable, 5, false, 100);
+        setColumnVisible(ruleTable, 5, ewe, 110);
         ruleHint.setText(progressOnly()
             ? "<html>只匹配最新一条物流进度，不判断地点或地区。多个条件满足任一条即匹配。<br>支持包含和精确匹配；编辑后点击“保存并应用”。</html>"
+            : ewe ? "<html>只匹配最新轨迹：所在区域、地点和物流信息同时满足；多条条件满足任意一条即匹配。<br>国内指中国大陆，境外含港澳台；地点填写“成都”可包含匹配“成都市”，未知或冲突地点不会猜测分类。<br>可在结果页配置国内 / 境外关键词；编辑条件后点击“保存并应用”。</html>"
             : "<html>只匹配最新轨迹：同一条件的地点和物流信息须同时满足；多个条件满足任一条即匹配。<br>字段留空表示不限，支持包含和精确匹配；编辑后点击“保存并应用”。</html>");
     }
 
@@ -318,32 +397,34 @@ public final class MainWindow extends JFrame {
         if (switching || running) return;
         boolean next17 = source.getSelectedIndex() == 1;
         boolean nextSf = source.getSelectedIndex() == 2;
+        boolean nextEwe = source.getSelectedIndex() == 3;
+        boolean nextFpx = source.getSelectedIndex() == 4;
         Track17Config.Carrier selected = (Track17Config.Carrier) carrier.getSelectedItem();
         int code = selected == null ? track17Config.selectedCode() : selected.code();
-        if (sf == nextSf && track17 == next17 && (!next17 || code == track17Config.selectedCode())) return;
+        if (fpx == nextFpx && ewe == nextEwe && sf == nextSf && track17 == next17 && (!next17 || code == track17Config.selectedCode())) return;
         switching = true;
         try {
             saveWorkspace();
             Track17Config nextConfig = new Track17Config(track17Config.carriers(), code);
             if (next17) nextConfig.save(rootData);
-            loadWorkspace(next17, nextSf, nextConfig);
+            loadWorkspace(next17, nextSf, nextEwe, nextFpx, nextConfig);
         } catch (Exception e) {
-            source.setSelectedIndex(sf ? 2 : track17 ? 1 : 0);
+            source.setSelectedIndex(fpx ? 4 : ewe ? 3 : sf ? 2 : track17 ? 1 : 0);
             updateCarriers();
             error(e);
         } finally { switching = false; }
     }
 
-    private void loadWorkspace(boolean next17, boolean nextSf, Track17Config config) throws IOException {
-        Path nextData = nextSf ? rootData.resolve("sf") : next17 ? Track17Config.progressDirectory(rootData, config.selectedCode()) : rootData;
+    private void loadWorkspace(boolean next17, boolean nextSf, boolean nextEwe, boolean nextFpx, Track17Config config) throws IOException {
+        Path nextData = nextFpx ? rootData.resolve("4px") : nextEwe ? rootData.resolve("ewe") : nextSf ? rootData.resolve("sf") : next17 ? Track17Config.progressDirectory(rootData, config.selectedCode()) : rootData;
         FilesService nextFiles = new FilesService(nextData);
         FilesService nextSettings = next17 ? new FilesService(rootData.resolve("17track")) : nextFiles;
-        track17 = next17; sf = nextSf; track17Config = config;
+        track17 = next17; sf = nextSf; ewe = nextEwe; fpx = nextFpx; track17Config = config;
         data = nextData; files = nextFiles; settingsFiles = nextSettings;
         table.clearSelection(); resultModel.setRowCount(0); displayed = List.of();
         results.clear(); waybills = List.of(); input.setText(""); details.setText("选择运单查看完整轨迹。");
-        ruleModel.setRowCount(0); settings = sf ? Settings.sfDefaults() : track17 ? Settings.track17Defaults() : Settings.defaults();
-        search.setText(""); view.setSelectedIndex(0);
+        ruleModel.setRowCount(0); settings = fpx ? Settings.fpxDefaults() : ewe ? Settings.eweDefaults() : sf ? Settings.sfDefaults() : track17 ? Settings.track17Defaults() : Settings.defaults();
+        search.setText(""); regionSearch.setText(""); areaView.setSelectedItem(AreaFilter.ANY); view.setSelectedIndex(0);
         restore(); updateSourceControls(); rebuild();
         status.setText("已切换至 " + sourceName() + (track17 ? " / " + carrier.getSelectedItem() : "") + "，进度分别保存");
     }
@@ -378,12 +459,42 @@ public final class MainWindow extends JFrame {
                 saveWorkspace();
                 next.save(rootData);
                 switching = true;
-                loadWorkspace(true, false, next);
+                loadWorkspace(true, false, false, false, next);
                 updateCarriers(); updateSourceControls();
                 log("物流公司配置已保存；删除配置不会删除原查询记录");
                 return;
             } catch (Exception e) { error(e); }
             finally { switching = false; }
+        }
+    }
+
+    private void editRegions() {
+        if (!ewe || running) return;
+        JTextArea domestic = new JTextArea(String.join("\n", eweRegions.domestic()), 15, 24);
+        JTextArea overseas = new JTextArea(String.join("\n", eweRegions.overseas()), 15, 24);
+        JPanel columns = new JPanel(new GridLayout(1, 2, 12, 0));
+        JScrollPane in = new JScrollPane(domestic), out = new JScrollPane(overseas);
+        in.setBorder(BorderFactory.createTitledBorder("国内（中国大陆）地点关键词"));
+        out.setBorder(BorderFactory.createTitledBorder("境外（含港澳台）地点关键词"));
+        columns.add(in); columns.add(out);
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.add(new JLabel("<html>每行一个关键词，也支持逗号分隔；英文不区分大小写。只检查最新轨迹的地点。<br>可添加城市别名，如“成都”“CHENGDU”。未命中或同时命中两类时显示未知。<br>英文词按完整词匹配，避免 DE 被误识别到其他单词内部。</html>"), BorderLayout.NORTH);
+        panel.add(columns, BorderLayout.CENTER);
+        JButton defaults = new JButton("填入默认关键词");
+        defaults.addActionListener(e -> {
+            domestic.setText(String.join("\n", EweRegions.defaults().domestic()));
+            overseas.setText(String.join("\n", EweRegions.defaults().overseas()));
+        });
+        panel.add(defaults, BorderLayout.SOUTH);
+        while (JOptionPane.showConfirmDialog(this, panel, "EWE 国内 / 境外关键词配置", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+            try {
+                EweRegions next = new EweRegions(EweRegions.parseWords(domestic.getText()), EweRegions.parseWords(overseas.getText()));
+                files.saveEweRegions(next);
+                eweRegions = next;
+                rebuild();
+                log("地区关键词已保存，已有结果已按新配置重新判断");
+                return;
+            } catch (Exception e) { error(e); }
         }
     }
 
@@ -407,7 +518,7 @@ public final class MainWindow extends JFrame {
             boolean enabled = Boolean.TRUE.equals(ruleModel.getValueAt(i, 0));
             if (name.isEmpty()) throw new IOException("第 " + (i + 1) + " 条条件缺少名称");
             AreaFilter area = !progressOnly() && ruleModel.getValueAt(i, 5) instanceof AreaFilter selected ? selected : AreaFilter.ANY;
-            if (enabled && location.isEmpty() && detail.isEmpty() && area == AreaFilter.ANY) throw new IOException("条件“" + name + "”请填写" + (progressOnly() ? "物流进度" : "地点或物流信息"));
+            if (enabled && location.isEmpty() && detail.isEmpty() && area == AreaFilter.ANY) throw new IOException("条件“" + name + "”请填写" + (progressOnly() ? "物流进度" : ewe ? "所在区域、地点或物流信息" : "地点或物流信息"));
             rules.add(new Rule(enabled, name, location, detail, "精确".equals(value(i, 4)) ? MatchMode.EXACT : MatchMode.CONTAINS, area));
         }
         Settings next = new Settings((Integer) interval.getValue(), timeZone.getSelectedIndex() == 1 ? "consigneeView" : "senderView", List.copyOf(rules));
@@ -439,7 +550,7 @@ public final class MainWindow extends JFrame {
 
     private void execute(List<String> imported, List<String> pending, Map<String, Result> saved, Settings runSettings, BatchRunner.Control runControl) {
         String outcome;
-        try (TrackingGateway gateway = sf ? new SfGateway(data.resolve("browser-profile")) : track17
+        try (TrackingGateway gateway = fpx ? new FpxGateway() : ewe ? new EweGateway() : sf ? new SfGateway(data.resolve("browser-profile")) : track17
                 ? new Track17Gateway(rootData.resolve("17track/browser-profile"), track17Config.selectedCode())
                 : new BrowserGateway(data.resolve("browser-profile"))) {
             new BatchRunner().run(pending, runSettings, gateway, runControl, new BatchRunner.Listener() {
@@ -496,7 +607,7 @@ public final class MainWindow extends JFrame {
     private void setRunning(boolean value) {
         running = value; start.setEnabled(!value); resume.setEnabled(!value); input.setEditable(!value);
         importButton.setEnabled(!value); pause.setEnabled(value); stop.setEnabled(value); pause.setText("暂停");
-        source.setEnabled(!value); carrier.setEnabled(!value); configureCarriers.setEnabled(!value);
+        source.setEnabled(!value); carrier.setEnabled(!value); configureCarriers.setEnabled(!value); configureRegions.setEnabled(!value);
     }
 
     private void rebuild() {
@@ -506,12 +617,14 @@ public final class MainWindow extends JFrame {
         int filter = view.getSelectedIndex();
         for (String no : waybills) {
             Result result = results.get(no);
-            List<String> matches = result == null ? List.of() : matchedRules(result, settings.rules());
+            List<String> matches = result == null ? List.of() : matches(result);
             if (filter == 1 && matches.isEmpty() || filter == 2 && (result == null || result.state() != QueryState.OK || !matches.isEmpty())
                 || filter == 3 && (result == null || result.state() != QueryState.FAILED)
                 || filter == 4 && (result == null || result.state() != QueryState.NO_DATA)
                 || filter == 5 && result != null) continue;
             Event latest = result == null ? null : result.latest();
+            if (ewe && areaView.getSelectedItem() != AreaFilter.ANY && (latest == null || eweRegions.classify(latest) != areaView.getSelectedItem())) continue;
+            if (ewe && !regionSearch.getText().isBlank() && (latest == null || !latest.location().toLowerCase(Locale.ROOT).contains(regionSearch.getText().strip().toLowerCase(Locale.ROOT)))) continue;
             String text = no + " " + (latest == null ? "" : progressOnly() ? latest.detail() : latest.description()) + " " + String.join(" ", matches);
             if (!text.toLowerCase(Locale.ROOT).contains(keyword)) continue;
             rows.add(no);
@@ -525,15 +638,18 @@ public final class MainWindow extends JFrame {
             Result result = results.get(no); Event event = result == null ? null : result.latest();
             resultModel.addRow(new Object[]{no, result == null ? "待查询" : result.state().label,
                 event == null ? "" : event.eventTime(), event == null ? "" : event.location(), event == null ? "" : event.detail(),
-                result == null ? "" : String.join("；", matchedRules(result, settings.rules()))});
+                result == null ? "" : String.join("；", matches(result)),
+                ewe && event != null ? eweRegions.classify(event).label : ""});
         }
         if (selected != null && displayed.contains(selected)) {
             int index = table.convertRowIndexToView(displayed.indexOf(selected));
             table.setRowSelectionInterval(index, index);
         }
-        long matched = results.values().stream().filter(r -> !matchedRules(r, settings.rules()).isEmpty()).count();
+        long matched = results.values().stream().filter(r -> !matches(r).isEmpty()).count();
         long failed = results.values().stream().filter(r -> r.state() == QueryState.FAILED).count();
-        summary.setText("总计 " + waybills.size() + "    已查询 " + results.size() + "    匹配 " + matched + "    失败 " + failed + "    当前显示 " + displayed.size());
+        totalValue.setText(Integer.toString(waybills.size())); completedValue.setText(Integer.toString(results.size()));
+        matchedValue.setText(Long.toString(matched)); failedValue.setText(Long.toString(failed));
+        summary.setText("当前显示 " + displayed.size() + " 条运单  ·  选择一条查看完整轨迹");
         progress.setMaximum(Math.max(1, waybills.size())); progress.setValue(results.size());
         progress.setString(results.size() + " / " + waybills.size());
     }
@@ -570,7 +686,7 @@ public final class MainWindow extends JFrame {
         try {
             if (json && progressOnly()) FilesService.exportProgressJson(path, selected);
             else if (json) FilesService.JSON.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), selected);
-            else FilesService.exportCsv(path, selected, settings.rules(), progressOnly());
+            else FilesService.exportCsv(path, selected, settings.rules(), progressOnly(), ewe ? eweRegions::classify : MainlandLocation::classify);
             status.setText("已导出 " + selected.size() + " 条已查询结果：" + path.toAbsolutePath());
         } catch (Exception e) { error(e); }
     }

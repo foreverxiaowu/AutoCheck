@@ -43,8 +43,10 @@ final class PackagingCheck {
             SwingUtilities.invokeAndWait(() -> {
                 try {
                     MainWindow window = new MainWindow(testData); window.setVisible(true);
+                    if (window.getIconImages().size() != 7) throw new IllegalStateException("应用图标资源缺失");
+                    report.put("applicationIcon", "passed");
                     JComboBox<?> source = findComboBox(window, "querySource");
-                    if (source == null || source.getItemCount() != 3) throw new IllegalStateException("查询平台入口缺失");
+                    if (source == null || source.getItemCount() != 5) throw new IllegalStateException("查询平台入口缺失");
                     source.setSelectedIndex(1);
                     if (!window.getTitle().contains("17TRACK")) throw new IllegalStateException("17TRACK 入口检查失败");
                     JComboBox<?> carriers = findComboBox(window, "carrier");
@@ -56,12 +58,16 @@ final class PackagingCheck {
                     report.put("builtInCarriers", expectedCarriers);
                     source.setSelectedIndex(2);
                     if (!window.getTitle().contains("顺丰")) throw new IllegalStateException("顺丰入口检查失败");
+                    source.setSelectedIndex(3);
+                    if (!window.getTitle().contains("EWE")) throw new IllegalStateException("EWE 入口检查失败");
+                    source.setSelectedIndex(4);
+                    if (!window.getTitle().contains("4PX")) throw new IllegalStateException("4PX 入口检查失败");
                     source.setSelectedIndex(0);
                     window.dispatchEvent(new java.awt.event.WindowEvent(window, java.awt.event.WindowEvent.WINDOW_CLOSING));
                 } catch (Exception e) { throw new IllegalStateException(e); }
             });
             report.put("desktopWindow", "passed");
-            report.put("trackingSources", List.of("YTO", "17TRACK", "SF International"));
+            report.put("trackingSources", List.of("YTO", "17TRACK", "SF International", "EWE", "4PX"));
             report.put("status", "passed");
         } catch (Exception e) {
             report.put("status", "failed"); report.put("error", e.toString());

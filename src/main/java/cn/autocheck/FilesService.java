@@ -54,6 +54,8 @@ public final class FilesService {
     public synchronized void saveSettings(Settings settings) throws IOException { atomicWrite(directory.resolve("settings.json"), settings); }
     public Snapshot loadSnapshot() throws IOException { return read("progress.json", Snapshot.class); }
     public Settings loadSettings() throws IOException { return read("settings.json", Settings.class); }
+    public EweRegions loadEweRegions() throws IOException { return read("regions.json", EweRegions.class); }
+    public synchronized void saveEweRegions(EweRegions regions) throws IOException { atomicWrite(directory.resolve("regions.json"), regions); }
     public Track17Config loadTrack17Config() throws IOException { return read("carriers.json", Track17Config.class); }
     public synchronized void saveTrack17Config(Track17Config config) throws IOException { atomicWrite(directory.resolve("carriers.json"), config); }
     private <T> T read(String name, Class<T> type) throws IOException {
@@ -74,6 +76,10 @@ public final class FilesService {
     }
 
     public static void exportCsv(Path path, List<Result> results, List<Rule> rules, boolean progressOnly) throws IOException {
+        exportCsv(path, results, rules, progressOnly, MainlandLocation::classify);
+    }
+    public static void exportCsv(Path path, List<Result> results, List<Rule> rules, boolean progressOnly,
+                                 java.util.function.Function<Event, AreaFilter> classifier) throws IOException {
         List<Rule> exportRules = progressOnly ? new Settings(3, "", rules).progressOnly().rules() : rules;
         try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             out.write('\uFEFF');
@@ -86,9 +92,9 @@ public final class FilesService {
                     event == null ? "" : event.eventTime(), event == null ? "" : event.timeZone()));
                 if (!progressOnly) row.add(event == null ? "" : event.location());
                 row.add(event == null ? "" : event.detail());
-                row.add(String.join("；", matchedRules(result, exportRules)));
+                row.add(String.join("；", matchedRules(result, exportRules, classifier)));
                 row.add(clean(result.error())); row.add(clean(result.queriedAt()));
-                if (!progressOnly) { row.add(event == null ? "" : clean(event.country())); row.add(event == null ? "" : MainlandLocation.classify(event).label); }
+                if (!progressOnly) { row.add(event == null ? "" : clean(event.country())); row.add(event == null ? "" : classifier.apply(event).label); }
                 writeRow(out, row);
             }
         }

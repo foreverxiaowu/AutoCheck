@@ -1,0 +1,277 @@
+{
+  "result": 1,
+  "data": [
+    {
+      "serverCode": "8423091997104",
+      "tracks": [
+        {
+          "tkDateStr": "2026-01-25 16:27:09",
+          "tkLocation": "四川省成都市成都市西林四街揽投部",
+          "tkTimezone": "",
+          "tkDesc": "您的快件已代收【家人，公司上门】，如有疑问请电联快递员【梁海东，电话:[电话省略]】。有事呼叫我，少一次投诉，多一份感恩。中国邮政将全心呵护您的所托，服务热线11183。",
+          "tkDate": "2026-01-25T16:27:09+08:00",
+          "tkCode": "FPX_S_OK"
+        },
+        {
+          "tkDateStr": "2026-01-25 15:15:57",
+          "tkLocation": "四川省成都市成都市西林四街揽投部",
+          "tkTimezone": "",
+          "tkDesc": "快件正在派送中，请耐心等待，保持电话畅通，准备签收，如有疑问请电联快递员【梁海东，电话:[电话省略]】或揽投部【电话:[电话省略]】，服务热线11183。",
+          "tkDate": "2026-01-25T15:15:57+08:00",
+          "tkCode": "FPX_D_OFD"
+        },
+        {
+          "tkDateStr": "2026-01-25 14:15:00",
+          "tkLocation": "四川省成都市成都市西林四街揽投部",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【成都市西林四街揽投部】",
+          "tkDate": "2026-01-25T14:15:00+08:00",
+          "tkCode": null
+        },
+        {
+          "tkDateStr": "2026-01-25 11:19:42",
+          "tkLocation": "四川省成都市成都航站",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【成都航站】，正在发往下一站",
+          "tkDate": "2026-01-25T11:19:42+08:00",
+          "tkCode": "FPX_F_DF"
+        },
+        {
+          "tkDateStr": "2026-01-25 05:51:06",
+          "tkLocation": "四川省成都市成都航站",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【成都航站】",
+          "tkDate": "2026-01-25T05:51:06+08:00",
+          "tkCode": "FPX_L_GNZZ"
+        },
+        {
+          "tkDateStr": "2026-01-24 03:51:18",
+          "tkLocation": "广东省广州市广州市江高包件车间",
+          "tkTimezone": "",
+          "tkDesc": "预计【1月25日】到达【成都市】，两地距离1582km，将在【1月25日上午】更新快件状态，请您放心。",
+          "tkDate": "2026-01-24T03:51:18+08:00",
+          "tkCode": null
+        },
+        {
+          "tkDateStr": "2026-01-24 03:40:09",
+          "tkLocation": "广东省广州市广州市江高包件车间",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【广州市江高包件车间】，正在发往下一站",
+          "tkDate": "2026-01-24T03:40:09+08:00",
+          "tkCode": "FPX_F_DF"
+        },
+        {
+          "tkDateStr": "2026-01-24 00:28:28",
+          "tkLocation": "广东省广州市广州市江高包件车间",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【广州市江高包件车间】",
+          "tkDate": "2026-01-24T00:28:28+08:00",
+          "tkCode": "FPX_L_GNZZ"
+        },
+        {
+          "tkDateStr": "2026-01-23 19:56:28",
+          "tkLocation": "广东省珠海市珠海市行业客户快件揽收部",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【珠海市行业客户快件揽收部】，正在发往【广州市江高包件车间】",
+          "tkDate": "2026-01-23T19:56:28+08:00",
+          "tkCode": "FPX_L_003"
+        },
+        {
+          "tkDateStr": "2026-01-23 17:28:23",
+          "tkLocation": "广东省珠海市珠海市行业客户快件揽收部",
+          "tkTimezone": "",
+          "tkDesc": "快件已在【珠海市行业客户快件揽收部】完成分拣，准备发出",
+          "tkDate": "2026-01-23T17:28:23+08:00",
+          "tkCode": null
+        },
+        {
+          "tkDateStr": "2026-01-23 17:06:44",
+          "tkLocation": "广东省珠海市珠海市行业客户快件揽收部",
+          "tkTimezone": "",
+          "tkDesc": "中国邮政已收取快件",
+          "tkDate": "2026-01-23T17:06:44+08:00",
+          "tkCode": "FPX_O_RC"
+        },
+        {
+          "tkDateStr": "2025-12-20 22:20:46",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "您的快件已代收【村邮站签收】，如有疑问请电联快递员【刘凯丽，电话:[电话省略]】。有事呼叫我，少一次投诉，多一份感恩。中国邮政将全心呵护您的所托，服务热线11183。",
+          "tkDate": "2025-12-20T22:20:46+08:00",
+          "tkCode": "FPX_S_OK"
+        },
+        {
+          "tkDateStr": "2025-12-20 13:30:25",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "您的快件已代收，如有疑问请电联快递员【刘凯丽，电话:[电话省略]】，揽投部【电话:[电话省略]，投诉电话【电话:[电话省略]】。有事呼叫我，少一次投诉，多一份感恩。中国邮政将全心呵护您的所托，服务热线11183。",
+          "tkDate": "2025-12-20T13:30:25+08:00",
+          "tkCode": "FPX_S_OK"
+        },
+        {
+          "tkDateStr": "2025-12-20 08:46:32",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "快件正在派送中，请耐心等待，保持电话畅通，准备签收，如有疑问请电联快递员【刘凯丽，电话:[电话省略]】或揽投部【电话:[电话省略]】，服务热线11183。",
+          "tkDate": "2025-12-20T08:46:32+08:00",
+          "tkCode": "FPX_D_DIP"
+        },
+        {
+          "tkDateStr": "2025-12-20 08:18:11",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【深圳市龙华福城直投中心】",
+          "tkDate": "2025-12-20T08:18:11+08:00",
+          "tkCode": null
+        },
+        {
+          "tkDateStr": "2025-12-20 06:03:28",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【深圳邮区中心快件处理中心】，正在发往下一站",
+          "tkDate": "2025-12-20T06:03:28+08:00",
+          "tkCode": "FPX_M_SDFA"
+        },
+        {
+          "tkDateStr": "2025-12-20 03:44:38",
+          "tkLocation": "深圳市",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【深圳邮区中心快件处理中心】",
+          "tkDate": "2025-12-20T03:44:38+08:00",
+          "tkCode": "FPX_L_GNZZ"
+        },
+        {
+          "tkDateStr": "2025-12-20 01:03:31",
+          "tkLocation": "东莞市",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【东莞市东岸包件车间】，正在发往下一站",
+          "tkDate": "2025-12-20T01:03:31+08:00",
+          "tkCode": "FPX_M_SDFA"
+        },
+        {
+          "tkDateStr": "2025-12-19 23:28:49",
+          "tkLocation": "东莞市",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【东莞市东岸包件车间】",
+          "tkDate": "2025-12-19T23:28:49+08:00",
+          "tkCode": "FPX_L_GNZZ"
+        },
+        {
+          "tkDateStr": "2025-12-19 19:35:54",
+          "tkLocation": "珠海市",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【珠海市包件车间】，正在发往下一站",
+          "tkDate": "2025-12-19T19:35:54+08:00",
+          "tkCode": "FPX_M_SDFA"
+        },
+        {
+          "tkDateStr": "2025-12-19 19:13:38",
+          "tkLocation": "珠海市",
+          "tkTimezone": "",
+          "tkDesc": "快件到达【珠海市包件车间】",
+          "tkDate": "2025-12-19T19:13:38+08:00",
+          "tkCode": "FPX_L_GNZZ"
+        },
+        {
+          "tkDateStr": "2025-12-19 17:43:03",
+          "tkLocation": "珠海市",
+          "tkTimezone": "",
+          "tkDesc": "快件离开【珠海市行业客户快件揽收部】，正在发往【珠海市包件车间】",
+          "tkDate": "2025-12-19T17:43:03+08:00",
+          "tkCode": "FPX_L_003"
+        },
+        {
+          "tkDateStr": "2025-12-19 12:24:15",
+          "tkLocation": "珠海市",
+          "tkTimezone": "",
+          "tkDesc": "快件已在【珠海市行业客户快件揽收部】完成分拣，准备发出",
+          "tkDate": "2025-12-19T12:24:15+08:00",
+          "tkCode": null
+        },
+        {
+          "tkDateStr": "2025-12-19 11:05:14",
+          "tkLocation": "珠海市",
+          "tkTimezone": "",
+          "tkDesc": "中国邮政已收取快件",
+          "tkDate": "2025-12-19T11:05:14+08:00",
+          "tkCode": "FPX_O_RR"
+        },
+        {
+          "tkDateStr": "2025-12-19 09:32:00",
+          "tkLocation": null,
+          "tkTimezone": null,
+          "tkDesc": "  包裹已清关完成，等待配送，配送公司：【ZHEMS珠海邮政】，配送单号：8428783053404",
+          "tkDate": "2025-12-19T09:32:00+08:00",
+          "tkCode": "FPX_I_CPC"
+        },
+        {
+          "tkDateStr": "2025-12-12 12:18:01",
+          "tkLocation": null,
+          "tkTimezone": null,
+          "tkDesc": "  您的包裹正在清关中，等待海关放行",
+          "tkDate": "2025-12-12T12:18:01+08:00",
+          "tkCode": "FPX_I_CP"
+        },
+        {
+          "tkDateStr": "2025-12-12 11:18:01",
+          "tkLocation": "中国港口",
+          "tkTimezone": "",
+          "tkDesc": "您的包裹干线陆运已到达",
+          "tkDate": "2025-12-12T11:18:01+08:00",
+          "tkCode": "FPX_M_LA"
+        },
+        {
+          "tkDateStr": "2025-12-11 14:20:50",
+          "tkLocation": "香港",
+          "tkTimezone": "",
+          "tkDesc": "香港  您的包裹干线陆运已出发",
+          "tkDate": "2025-12-11T14:20:50+08:00",
+          "tkCode": "FPX_M_LD"
+        },
+        {
+          "tkDateStr": "2025-12-10 00:28:01",
+          "tkLocation": "",
+          "tkTimezone": "",
+          "tkDesc": "  干线物流服务商已提货，您的包裹正在安排干线运输",
+          "tkDate": "2025-12-10T00:28:01+08:00",
+          "tkCode": "FPX_M_GXLS"
+        },
+        {
+          "tkDateStr": "2025-12-09 22:28:01",
+          "tkLocation": "",
+          "tkTimezone": "",
+          "tkDesc": "  您的包裹已出库，等待干线运输",
+          "tkDate": "2025-12-09T22:28:01+08:00",
+          "tkCode": "FPX_C_ADFF"
+        },
+        {
+          "tkDateStr": "2025-12-09 10:42:26",
+          "tkLocation": "中国香港仓库",
+          "tkTimezone": null,
+          "tkDesc": "中国香港仓库  库内查验完成",
+          "tkDate": "2025-12-09T10:42:26+08:00",
+          "tkCode": "FPX_C_INS"
+        },
+        {
+          "tkDateStr": "2025-12-09 10:34:26",
+          "tkLocation": "中国香港仓库",
+          "tkTimezone": null,
+          "tkDesc": "中国香港仓库  您的包裹已揽收入库，等待出库中",
+          "tkDate": "2025-12-09T10:34:26+08:00",
+          "tkCode": "FPX_F_AF"
+        },
+        {
+          "tkDateStr": "2025-12-09 10:04:26",
+          "tkLocation": "中国香港仓库",
+          "tkTimezone": null,
+          "tkDesc": "中国香港仓库  您的订单信息已收到",
+          "tkDate": "2025-12-09T10:04:26+08:00",
+          "tkCode": "FPX_O_IR"
+        }
+      ],
+      "queryCode": "OC8011202512090018",
+      "status": 2
+    }
+  ],
+  "message": "操作成功"
+}

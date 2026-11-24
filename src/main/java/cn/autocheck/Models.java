@@ -44,8 +44,11 @@ public final class Models {
         }
         public Rule { if (area == null) area = AreaFilter.ANY; }
         public boolean matches(Event event) {
+            return matches(event, MainlandLocation::classify);
+        }
+        public boolean matches(Event event, java.util.function.Function<Event, AreaFilter> classifier) {
             if (!enabled || event == null || (area == AreaFilter.ANY && clean(location).isEmpty() && clean(detail).isEmpty())) return false;
-            return (area == AreaFilter.ANY || MainlandLocation.classify(event) == area)
+            return (area == AreaFilter.ANY || classifier.apply(event) == area)
                 && match(event.location(), location) && match(event.detail(), detail);
         }
         private boolean match(String value, String condition) {
@@ -55,6 +58,19 @@ public final class Models {
     }
 
     public record Settings(int intervalSeconds, String timeZoneType, List<Rule> rules) {
+        public static Settings fpxDefaults() {
+            return new Settings(3, "", List.of(
+                new Rule(true, "清关中", "", "正在清关中", MatchMode.CONTAINS),
+                new Rule(true, "清关完成", "", "清关完成", MatchMode.CONTAINS),
+                new Rule(true, "派送中", "", "正在派送", MatchMode.CONTAINS),
+                new Rule(true, "已代收", "", "已代收", MatchMode.CONTAINS)));
+        }
+        public static Settings eweDefaults() {
+            return new Settings(3, "", List.of(
+                new Rule(true, "包裹清关中", "", "包裹清关中", MatchMode.CONTAINS),
+                new Rule(true, "已到达中国", "", "干线航班已到达", MatchMode.CONTAINS),
+                new Rule(true, "已领取", "", "快件已领取", MatchMode.CONTAINS)));
+        }
         public static Settings sfDefaults() {
             return new Settings(3, "", List.of(
                 new Rule(true, "清关进行中", "", "清关进行中", MatchMode.CONTAINS),
@@ -89,7 +105,10 @@ public final class Models {
     }
 
     public static List<String> matchedRules(Result result, List<Rule> rules) {
+        return matchedRules(result, rules, MainlandLocation::classify);
+    }
+    public static List<String> matchedRules(Result result, List<Rule> rules, java.util.function.Function<Event, AreaFilter> classifier) {
         if (result == null || result.state() != QueryState.OK) return List.of();
-        return rules.stream().filter(r -> r.matches(result.latest())).map(Rule::name).toList();
+        return rules.stream().filter(r -> r.matches(result.latest(), classifier)).map(Rule::name).toList();
     }
 }

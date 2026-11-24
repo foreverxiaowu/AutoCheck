@@ -1,10 +1,10 @@
-# AutoCheck · 圆通国际 / 17TRACK / 顺丰国际批量查询
+# AutoCheck · 圆通国际 / 17TRACK / 顺丰国际 / EWE / 4PX 批量查询
 
-Java 17 桌面程序，圆通国际每批最多查询 10 单，17TRACK 每批最多查询 40 单，顺丰国际每批最多查询 20 单，按各单号的最新物流信息匹配自定义条件。各平台独立保存设置、进度及浏览器会话，无需搭建数据库或 Web 服务。
+Java 17 桌面程序，圆通国际每批最多查询 10 单，17TRACK 每批最多查询 40 单，顺丰国际每批最多查询 20 单，EWE 与 4PX 每批查询 10 单，按各单号的最新物流信息匹配自定义条件。各平台独立保存设置与进度，无需搭建数据库或 Web 服务。
 
-v1.1.2 新增内置物流公司：中国邮政（3011）和递四方（190094），旧配置会自动补入。保留窗口关闭后完整退出进程的修复；安装版供所有用户使用，安装与卸载需要管理员授权，没有管理员权限时可使用免安装版。
+v1.2.0 新增 EWE、4PX 独立查询及 EWE 地区分类配置，采用彩色桌面界面和随窗口伸缩的结果表格，并统一更新程序窗口、任务栏和 EXE 图标。保留内置物流公司及窗口关闭后完整退出进程的修复；安装版供所有用户使用，安装与卸载需要管理员授权，没有管理员权限时可使用免安装版。
 
-**已发布的 v1.1.0：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)。v1.1.2 修复版构建产物位于本机 `dist/`，此链接仍是旧版。
+**已发布的 v1.1.0：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)。v1.2.0 修复版构建产物位于本机 `dist/`，此链接仍是旧版。
 
 安装包已包含 Java 和查询浏览器，适用于 Windows 10/11 的 Intel / AMD 64 位电脑。
 
@@ -12,10 +12,10 @@ v1.1.2 新增内置物流公司：中国邮政（3011）和递四方（190094）
 
 面向 Windows 10/11 的 Intel / AMD 64 位电脑，已提供两种自带 Java 和查询浏览器的发行包，目标电脑无需安装 Java、Maven、Chrome 或 Edge：
 
-- **安装版**：运行 `dist/AutoCheck-1.1.2.exe`，授权管理员权限，按向导安装后从桌面或开始菜单打开。默认安装到 `%ProgramFiles%\AutoCheckApp`，供所有用户使用。
-- **免安装版**：将 `dist/AutoCheck-1.1.2-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
+- **安装版**：运行 `dist/AutoCheck-1.2.0.exe`，授权管理员权限，按向导安装后从桌面或开始菜单打开。默认安装到 `%ProgramFiles%\AutoCheckApp`，供所有用户使用。
+- **免安装版**：将 `dist/AutoCheck-1.2.0-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
 
-1.1.0 是按用户安装的版本，升级到 1.1.2 前请在原安装用户下卸载旧版；不同安装范围不能保证自动升级。关闭窗口后，程序会先等待当前查询、保存已经返回的结果并关闭查询浏览器，再退出整个进程。`app.lock` 文件可以保留，文件本身存在不会阻止启动。
+1.1.0 是按用户安装的版本，升级到 1.2.0 前请在原安装用户下卸载旧版；不同安装范围不能保证自动升级。关闭窗口后，程序会先等待当前查询、保存已经返回的结果并关闭查询浏览器，再退出整个进程。`app.lock` 文件可以保留，文件本身存在不会阻止启动。
 
 如果旧版卸载出现 `D:\Config.Msi\*.rbf` 的 Error 5，即使安装目录和列表项已经消失，也可能还有未结束的 Windows Installer 回滚/权限处理。先结束或取消原卸载任务，再排查该目录和具体文件的管理员、SYSTEM 权限。新安装包不会自动修复系统回滚目录，也不要通过删除整个 `Config.Msi`、放开整个磁盘权限或禁用回滚来绕过错误。
 
@@ -28,10 +28,12 @@ v1.1.2 新增内置物流公司：中国邮政（3011）和递四方（190094）
 也可以在项目目录运行：
 
 ```powershell
-java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.1.2.jar
+java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.2.0.jar
 ```
 
 ## 使用
+
+桌面界面使用 Java Swing + FlatLaf 浅色主题，提供蓝紫渐变顶部、彩色查询统计卡片和状态颜色。导入、继续查询、暂停、停止及导出操作集中显示；结果、筛选设置和日志分别查看。结果表格随窗口宽度自适应，“物流进度”列优先利用剩余空间；较窄时保留单号、时间等列的必要宽度并支持横向滚动。
 
 1. 粘贴单号，或点击“导入 TXT / CSV / Excel”。`examples/waybills.txt` 是你提供的 10 个样例单号。
 2. 在“筛选条件与设置”中配置地点、物流信息、包含/精确匹配、查询间隔，点击“保存并应用”。预置了清关中、成都签收、海关审核三个条件。
@@ -74,7 +76,42 @@ java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.1.2.jar
 
 顺丰数据单独存于 `sf/settings.json`、`sf/progress.json` 和 `sf/browser-profile/`，暂停、继续、导入导出与其他入口相同。切换平台后恢复各自进度。
 
-### 通用筛选规则
+### EWE 查询
+
+顶部“查询平台”选择 **EWE**，导入单号后开始查询，每批最多 10 单。示例见 `examples/ewe-waybills.txt`。通过 `GET https://www.epintl.com.au/oms/api/tracking/emetro/<逗号分隔单号>` 直接查询，不需要打开浏览器。
+
+读取 `Payload[].ConsignmentNo` 归属单号，`Details[].DateString` 为事件时间，`Place` 为地区，`Message` 为物流详情。保留完整历史，按事件时间倒序排列；同一时间的记录按接口原顺序倒序显示。接口未提供时区，不推测地区时区或进行跨时区换算。只用最新一条轨迹筛选，不使用顶层寄件地、目的地或汇总 Status 替代轨迹。
+
+- 结果页的“地区”输入框按最新轨迹地点包含筛选，可与“匹配条件”视图、搜索叠加使用。
+- 结果页“位置分类”可选择“中国大陆 / 大陆以外 / 地址未知”，并显示每票运单的当前位置分类。这里国内按中国大陆判断，境外含港澳台。
+- 点击“国内 / 境外关键词配置”维护国家、城市及别名，一行一个或逗号分隔。默认识别成都、苏州、重庆、法兰克福 / Frankfurt / Germany、悉尼等常见地点；英文不区分大小写且按完整词匹配。仅按最新 `Place` 判断，不从物流文字或目的地猜测国家；未命中或同时命中两类时归为未知。保存后立即重筛已有结果。
+- 在“筛选条件与设置”中可配置地点、物流信息及包含/精确匹配。同一条件的地点和物流信息须同时满足，多个条件满足任意一条即匹配。默认提供“包裹清关中”“已到达中国”“已领取”，可自由修改。
+- 设置与进度分别保存在 `ewe/settings.json` 和 `ewe/progress.json`；支持暂停、停止、续查、TXT/CSV/Excel 导入和 CSV/JSON 导出，导出包含地点与完整物流详情。
+
+地区分类关键词保存在 `ewe/regions.json`。筛选条件中的“所在区域”可与地点、物流信息同时使用，例如：
+
+| 条件 | 所在区域 | 地点 | 物流信息 |
+| --- | --- | --- | --- |
+| 当前在国内 | 中国大陆 | 留空 | 留空 |
+| 当前在境外 | 大陆以外 | 留空 | 留空 |
+| 当前在成都 | 中国大陆 | 成都 | 留空 |
+| 成都清关中 | 中国大陆 | 成都 | 清关中 |
+
+以上示例使用“包含”匹配，“成都”能匹配“成都市 金牛区”。每条条件内的字段同时满足，多条条件满足任意一条即可。需要按英文城市文字筛选时，可另外配置地点为 `Chengdu` 的条件。
+
+本次本地源码已新增 EWE；现有 GitHub 安装包须重新构建发布后才会包含此功能。开发运行可使用重新构建后的 `start.cmd`。
+
+### 4PX 查询
+
+顶部“查询平台”选择 **4PX**，导入单号后开始查询。当前按每批 10 单发送 `POST https://track.4px.com/track/v2/front/listTrackV3`，请求包含 `queryCodes`、`language=zh-cn` 和空的 `translateLanguage`。样例见 `examples/4px-waybills.txt`。此入口直接请求接口，无需打开浏览器。
+
+按 `data[].queryCode` 对应查询单号，读取 `tracks[].tkDesc` 作为物流进度，用带时区的 `tkDate` 确定最新一条。显示时优先使用接口的 `tkTimezone`；未提供时，从 `tkDateStr` 与绝对时间的对应关系恢复显示时区，否则使用 `tkDate` 自带时区。不根据寄件地或目的地推测时间。
+
+仅配置物流文字筛选，支持包含和精确匹配，默认提供“清关中”“清关完成”“派送中”“已代收”。只匹配最新进度，历史状态不参与当前筛选，不显示或筛选独立地区字段；物流描述中原本包含的地名仍保留。支持 TXT/CSV/Excel 导入、暂停、续查及 CSV/JSON 导出。
+
+4PX 设置与进度分别存于 `4px/settings.json` 和 `4px/progress.json`。当前本地源码及重新构建的 JAR 已包含该入口，GitHub 的既有 EXE 安装包需重新构建发布后才会包含。
+
+### 通用匹配规则
 
 只检查每个运单号时间最新的一条轨迹，不以历史上的清关、签收记录匹配当前状态。轨迹按事件时间与返回时区换算后倒序排列；缺失时区时使用 UTC 排序，并保留原始时间文本供查看。
 
@@ -131,6 +168,10 @@ mvn test
 mvn package
 # 可选：渲染桌面，截图写入 target/ui-smoke.png
 mvn '-Dautocheck.uiSmoke=true' test
+# 可选：使用 EWE 样例运单访问真实接口
+mvn '-Dautocheck.eweLiveSmoke=true' '-Dtest=EweTest' test
+# 可选：使用 4PX 样例运单访问真实接口
+mvn '-Dautocheck.fpxLiveSmoke=true' '-Dtest=FpxTest' test
 # 可选：使用本机 Edge 运行全部本地浏览器与界面测试（浏览器测试拦截全部网络请求）
 mvn '-Dautocheck.uiSmoke=true' '-Dautocheck.browserSmoke=true' test
 # 可选：真实 17TRACK 查询，可能要求人工验证，不自动作答
@@ -138,7 +179,7 @@ mvn '-Dautocheck.track17LiveSmoke=true' '-Dtest=SmokeTest#track17LiveEndpointRet
 # 可选：访问真实圆通接口，使用样例 10 个单号；可能触发人工验证
 mvn '-Dautocheck.liveSmoke=true' '-Dtest=SmokeTest#liveEndpointReturnsAnExplicitResultOrManualVerification' test
 # 构建后验证最终 JAR 中的 Excel、JSON、浏览器驱动及桌面界面
-java -cp 'target/test-classes;target/autocheck-1.1.2.jar' cn.autocheck.PackagedSmoke
+java -cp 'target/test-classes;target/autocheck-1.2.0.jar' cn.autocheck.PackagedSmoke
 # 构建自带 Java 和浏览器的 Windows 安装版及免安装版
 powershell -ExecutionPolicy Bypass -File packaging/build-windows.ps1
 # 构建过程也会两次启动并关闭真实 EXE，确认原生启动器/JVM 都退出且运行锁已释放

@@ -1,27 +1,38 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$bitmap = [Drawing.Bitmap]::new(256, 256)
-$graphics = [Drawing.Graphics]::FromImage($bitmap)
-$graphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
-$graphics.Clear([Drawing.Color]::FromArgb(25,44,65))
-$brush = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(75,181,201))
-$graphics.FillRectangle($brush, 47, 50, 162, 151)
-$pen = [Drawing.Pen]::new([Drawing.Color]::FromArgb(25,44,65), 12)
-$graphics.DrawLine($pen, 47,94,209,94)
-$graphics.DrawLine($pen, 128,50,128,114)
-$pen.Dispose()
-$pen = [Drawing.Pen]::new([Drawing.Color]::White, 15)
-$pen.StartCap = [Drawing.Drawing2D.LineCap]::Round
-$pen.EndCap = [Drawing.Drawing2D.LineCap]::Round
-$graphics.DrawLines($pen, [Drawing.Point[]]@([Drawing.Point]::new(91,151),[Drawing.Point]::new(117,177),[Drawing.Point]::new(168,126)))
-$stream = [IO.MemoryStream]::new()
-$bitmap.Save($stream,[Drawing.Imaging.ImageFormat]::Png)
-$png = $stream.ToArray()
-$output = [IO.File]::Create((Join-Path $PSScriptRoot 'autocheck.ico'))
-$writer = [IO.BinaryWriter]::new($output)
+$source = Join-Path $PSScriptRoot '../src/main/resources/cn/autocheck/app-icon.png'
+if (-not (Test-Path -LiteralPath $source)) { throw "Missing application icon artwork: $source" }
+$image = [Drawing.Image]::FromFile([IO.Path]::GetFullPath($source))
+$frames = @()
 try {
-    $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]1)
-    $writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0); $writer.Write([byte]0)
-    $writer.Write([uint16]1); $writer.Write([uint16]32)
-    $writer.Write([uint32]$png.Length); $writer.Write([uint32]22); $writer.Write($png)
-} finally { $writer.Dispose(); $stream.Dispose(); $pen.Dispose(); $brush.Dispose(); $graphics.Dispose(); $bitmap.Dispose() }
+    foreach ($size in @(16,24,32,48,64,128,256)) {
+        $bitmap = [Drawing.Bitmap]::new($size, $size, [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [Drawing.Graphics]::FromImage($bitmap)
+        $stream = [IO.MemoryStream]::new()
+        try {
+            $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+            $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $graphics.Clear([Drawing.Color]::Transparent)
+            $graphics.DrawImage($image, 0, 0, $size, $size)
+            $bitmap.Save($stream, [Drawing.Imaging.ImageFormat]::Png)
+            $frames += [pscustomobject]@{ size = $size; bytes = $stream.ToArray() }
+        } finally { $stream.Dispose(); $graphics.Dispose(); $bitmap.Dispose() }
+    }
+    $output = [IO.File]::Create((Join-Path $PSScriptRoot 'autocheck.ico'))
+    $writer = [IO.BinaryWriter]::new($output)
+    try {
+        $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]$frames.Count)
+        $offset = 6 + 16 * $frames.Count
+        foreach ($frame in $frames) {
+            $dimension = if ($frame.size -eq 256) { 0 } else { $frame.size }
+            $writer.Write([byte]$dimension); $writer.Write([byte]$dimension)
+            $writer.Write([byte]0); $writer.Write([byte]0)
+            $writer.Write([uint16]1); $writer.Write([uint16]32)
+            $writer.Write([uint32]$frame.bytes.Length); $writer.Write([uint32]$offset)
+            $offset += $frame.bytes.Length
+        }
+        foreach ($frame in $frames) { $writer.Write([byte[]]$frame.bytes) }
+    } finally { $writer.Dispose() }
+} finally { $image.Dispose() }
+Write-Output 'APP_ICON_READY: 16, 24, 32, 48, 64, 128, 256 px'

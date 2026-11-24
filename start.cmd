@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
-set "AUTOCHECK_JAR=target\autocheck-1.1.2.jar"
+set "AUTOCHECK_JAR=target\autocheck-1.2.0.jar"
 rem Use the same compatible Java for both Maven and the application.
 set "AUTOCHECK_JAVA_HOME="
 if defined JAVA_HOME call :tryJava "%JAVA_HOME%\bin\java.exe"
