@@ -2,6 +2,8 @@ package cn.autocheck;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.nio.channels.*;
 import java.nio.file.*;
 
@@ -22,7 +24,17 @@ public final class Main {
                 try { lock.release(); lockChannel.close(); } catch (Exception ignored) {}
             }));
             SwingUtilities.invokeLater(() -> {
-                try { new MainWindow(data).setVisible(true); }
+                try {
+                    MainWindow window = new MainWindow(data);
+                    window.addWindowListener(new WindowAdapter() {
+                        @Override public void windowClosed(WindowEvent event) {
+                            // MainWindow waits for the query, persistence and browser cleanup before disposal.
+                            // Disposing Swing windows alone need not stop native/runtime background threads.
+                            System.exit(0);
+                        }
+                    });
+                    window.setVisible(true);
+                }
                 catch (Exception e) { fail(e); }
             });
         } catch (Exception e) { fail(e); }

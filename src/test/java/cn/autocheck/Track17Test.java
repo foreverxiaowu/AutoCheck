@@ -101,6 +101,23 @@ class Track17Test {
         assertThrows(IllegalArgumentException.class, () -> new Track17Config(List.of(new Track17Config.Carrier("", 1)), 1));
     }
 
+    @Test void upgradesExistingCarriersOnceWithoutOverwritingChoicesOrRestoringDeletedPresets() throws Exception {
+        Path configPath = directory.resolve("17track/carriers.json");
+        Files.createDirectories(configPath.getParent());
+        Files.writeString(configPath, """
+            {"carriers":[{"name":"自定义公司","code":12345},{"name":"我的邮政","code":3011}],"selectedCode":12345}
+            """);
+        Track17Config upgraded = Track17Config.load(directory);
+        assertEquals(12345, upgraded.selectedCode());
+        assertEquals(List.of(new Track17Config.Carrier("自定义公司", 12345),
+            new Track17Config.Carrier("我的邮政", 3011), new Track17Config.Carrier("递四方", 190094)), upgraded.carriers());
+        assertEquals(upgraded, Track17Config.load(directory));
+
+        Track17Config edited = new Track17Config(List.of(upgraded.carriers().get(0)), 12345);
+        edited.save(directory);
+        assertEquals(edited, Track17Config.load(directory), "Presets deleted after upgrading must stay deleted");
+    }
+
     @Test void batchesFortyAndRetriesManualVerificationWithoutSavingIncompleteBatch() throws Exception {
         List<String> numbers = java.util.stream.IntStream.range(0, 81).mapToObj(i -> "TEST" + i).toList();
         List<List<String>> calls = new ArrayList<>(); List<Result> saved = new ArrayList<>();

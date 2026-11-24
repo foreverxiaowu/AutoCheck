@@ -1,5 +1,15 @@
-param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.1.0.exe'))
+param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.1.2.exe'))
 $ErrorActionPreference = 'Stop'
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw 'The machine-wide installer test requires an administrator PowerShell session.'
+}
+$existing = @(Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -eq 'AutoCheck' })
+if ($existing.Count -gt 0) { throw 'Refusing to run an upgrade/uninstall test while an existing AutoCheck installation is registered.' }
+$activeMsiClients = @(Get-CimInstance Win32_Process -Filter "Name='msiexec.exe'" -ErrorAction Stop |
+    Where-Object { $_.CommandLine -match '(?i)(?:^|\s)/(?:i|x|package|update|uninstall)(?:\s|\{|\")' })
+if ($activeMsiClients.Count -gt 0) { throw 'Another Windows Installer client is active. Finish or cancel it before running this test.' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $installerPath = [IO.Path]::GetFullPath($Installer)
 $testRoot = Join-Path $root ('target/installer-check/' + [Guid]::NewGuid().ToString('N'))

@@ -2,9 +2,9 @@
 
 Java 17 桌面程序，圆通国际每批最多查询 10 单，17TRACK 每批最多查询 40 单，顺丰国际每批最多查询 20 单，按各单号的最新物流信息匹配自定义条件。各平台独立保存设置、进度及浏览器会话，无需搭建数据库或 Web 服务。
 
-v1.1.0 新增 17TRACK 和顺丰国际查询，支持独立筛选条件与进度保存，并修复 Excel 不间断空格导入及 Java 版本选择问题。
+v1.1.2 新增内置物流公司：中国邮政（3011）和递四方（190094），旧配置会自动补入。保留窗口关闭后完整退出进程的修复；安装版供所有用户使用，安装与卸载需要管理员授权，没有管理员权限时可使用免安装版。
 
-**Windows 安装版：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)
+**已发布的 v1.1.0：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)。v1.1.2 修复版构建产物位于本机 `dist/`，此链接仍是旧版。
 
 安装包已包含 Java 和查询浏览器，适用于 Windows 10/11 的 Intel / AMD 64 位电脑。
 
@@ -12,8 +12,12 @@ v1.1.0 新增 17TRACK 和顺丰国际查询，支持独立筛选条件与进度�
 
 面向 Windows 10/11 的 Intel / AMD 64 位电脑，已提供两种自带 Java 和查询浏览器的发行包，目标电脑无需安装 Java、Maven、Chrome 或 Edge：
 
-- **安装版**：运行 `dist/AutoCheck-1.1.0.exe`，按向导安装后从桌面或开始菜单打开。默认按当前用户安装到 `%LOCALAPPDATA%\AutoCheckApp`。
-- **免安装版**：将 `dist/AutoCheck-1.1.0-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
+- **安装版**：运行 `dist/AutoCheck-1.1.2.exe`，授权管理员权限，按向导安装后从桌面或开始菜单打开。默认安装到 `%ProgramFiles%\AutoCheckApp`，供所有用户使用。
+- **免安装版**：将 `dist/AutoCheck-1.1.2-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
+
+1.1.0 是按用户安装的版本，升级到 1.1.2 前请在原安装用户下卸载旧版；不同安装范围不能保证自动升级。关闭窗口后，程序会先等待当前查询、保存已经返回的结果并关闭查询浏览器，再退出整个进程。`app.lock` 文件可以保留，文件本身存在不会阻止启动。
+
+如果旧版卸载出现 `D:\Config.Msi\*.rbf` 的 Error 5，即使安装目录和列表项已经消失，也可能还有未结束的 Windows Installer 回滚/权限处理。先结束或取消原卸载任务，再排查该目录和具体文件的管理员、SYSTEM 权限。新安装包不会自动修复系统回滚目录，也不要通过删除整个 `Config.Msi`、放开整个磁盘权限或禁用回滚来绕过错误。
 
 安装和查看已有结果可以离线进行；实时查询需要能访问圆通官网。Windows 安装包不能直接用于 macOS、Linux、32 位 Windows 或手机，不承诺兼容 Windows 7/8。安装包尚未配置商业代码签名证书，发布者可能显示为“未知发布者”。
 
@@ -24,7 +28,7 @@ v1.1.0 新增 17TRACK 和顺丰国际查询，支持独立筛选条件与进度�
 也可以在项目目录运行：
 
 ```powershell
-java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.1.0.jar
+java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.1.2.jar
 ```
 
 ## 使用
@@ -45,7 +49,7 @@ java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.1.0.jar
 ### 17TRACK 查询
 
 1. 顶部“查询平台”选择 **17TRACK**。原圆通功能仍在“圆通国际”入口。
-2. 选择物流公司，默认 **中通国际（190175）**。“物流公司配置”支持添加、修改、删除公司名称与 `fc` 编码，编码必须是唯一的正整数，需与 17TRACK 官网一致。每次导入的一组单号使用同一家物流公司；不同公司分开查询。
+2. 选择物流公司，内置 **中通国际（190175）**、**中国邮政（3011）**、**递四方（190094）**，默认选中中通国际。旧配置首次加载时会补入缺少的中国邮政和递四方，保留已有名称、当前选择和自定义公司；之后自行删除的公司不会反复补回。“物流公司配置”支持添加、修改、删除公司名称与 `fc` 编码，编码必须是唯一的正整数，需与 17TRACK 官网一致。每次导入的一组单号使用同一家物流公司；不同公司分开查询。
 3. 导入或粘贴单号后点击“开始全部查询”，每批最多 40 单。暂停、停止、继续未完成/失败项、完整轨迹查看及导出与圆通相同。
 4. 程序打开独立的 17TRACK 官网浏览器，由网页生成当前请求的 `sign`、会话 `guid` 并调用 `https://t.17track.net/track/restapi`。请求的 `data` 使用各单号及所选 `fc`，`sc=0`，官网当前使用 `timeZoneOffset=-480`。不保存或复用样例中的长签名。
 5. 出现安全验证时，手动在浏览器里完成，再回到程序点击“已在浏览器验证，继续”。当前批次不会提前标为完成。不要在该浏览器里改成其他单号或物流公司；修改本轮查询请停止任务后在程序中操作。
@@ -134,10 +138,12 @@ mvn '-Dautocheck.track17LiveSmoke=true' '-Dtest=SmokeTest#track17LiveEndpointRet
 # 可选：访问真实圆通接口，使用样例 10 个单号；可能触发人工验证
 mvn '-Dautocheck.liveSmoke=true' '-Dtest=SmokeTest#liveEndpointReturnsAnExplicitResultOrManualVerification' test
 # 构建后验证最终 JAR 中的 Excel、JSON、浏览器驱动及桌面界面
-java -cp 'target/test-classes;target/autocheck-1.1.0.jar' cn.autocheck.PackagedSmoke
+java -cp 'target/test-classes;target/autocheck-1.1.2.jar' cn.autocheck.PackagedSmoke
 # 构建自带 Java 和浏览器的 Windows 安装版及免安装版
 powershell -ExecutionPolicy Bypass -File packaging/build-windows.ps1
-# 可选：真实安装到测试目录、启动检查，然后卸载；不会操作已存在的同产品安装
+# 构建过程也会两次启动并关闭真实 EXE，确认原生启动器/JVM 都退出且运行锁已释放
+powershell -ExecutionPolicy Bypass -File packaging/test-app-exit.ps1
+# 可选：在管理员 PowerShell 中真实安装到测试目录、启动检查，然后卸载；已有 AutoCheck 安装时拒绝测试
 powershell -ExecutionPolicy Bypass -File packaging/test-installer.ps1
 ```
 

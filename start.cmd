@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
+set "AUTOCHECK_JAR=target\autocheck-1.1.2.jar"
 rem Use the same compatible Java for both Maven and the application.
 set "AUTOCHECK_JAVA_HOME="
 if defined JAVA_HOME call :tryJava "%JAVA_HOME%\bin\java.exe"
@@ -18,7 +19,7 @@ exit /b 1
 set "JAVA_HOME=%AUTOCHECK_JAVA_HOME%"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 echo Using Java: "%JAVA_HOME%"
-if not exist "target\autocheck-1.1.0.jar" (
+if not exist "%AUTOCHECK_JAR%" (
   where.exe mvn.cmd >nul 2>&1
   if errorlevel 1 (
     echo Maven was not found. Install Maven and add its bin directory to PATH.
@@ -33,7 +34,7 @@ if not exist "target\autocheck-1.1.0.jar" (
     exit /b 1
   )
 )
-"%JAVA_HOME%\bin\java.exe" -Dfile.encoding=UTF-8 -jar "target\autocheck-1.1.0.jar"
+"%JAVA_HOME%\bin\java.exe" -Dfile.encoding=UTF-8 -jar "%AUTOCHECK_JAR%"
 if errorlevel 1 pause
 exit /b
 
@@ -50,6 +51,6 @@ for /f "tokens=1,* delims==" %%A in ('""%~1" -XshowSettings:properties -version 
 if not defined AUTOCHECK_CANDIDATE exit /b
 if not defined AUTOCHECK_VERSION exit /b
 if %AUTOCHECK_VERSION% LSS 17 exit /b
-if not exist "target\autocheck-1.1.0.jar" if not exist "%AUTOCHECK_CANDIDATE%\bin\javac.exe" exit /b
+if not exist "%AUTOCHECK_JAR%" if not exist "%AUTOCHECK_CANDIDATE%\bin\javac.exe" exit /b
 set "AUTOCHECK_JAVA_HOME=%AUTOCHECK_CANDIDATE%"
 exit /b

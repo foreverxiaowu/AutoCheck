@@ -43,10 +43,17 @@ final class PackagingCheck {
             SwingUtilities.invokeAndWait(() -> {
                 try {
                     MainWindow window = new MainWindow(testData); window.setVisible(true);
-                    JComboBox<?> source = findSource(window);
+                    JComboBox<?> source = findComboBox(window, "querySource");
                     if (source == null || source.getItemCount() != 3) throw new IllegalStateException("查询平台入口缺失");
                     source.setSelectedIndex(1);
                     if (!window.getTitle().contains("17TRACK")) throw new IllegalStateException("17TRACK 入口检查失败");
+                    JComboBox<?> carriers = findComboBox(window, "carrier");
+                    List<Track17Config.Carrier> expectedCarriers = Track17Config.defaults().carriers();
+                    if (carriers == null || carriers.getItemCount() != expectedCarriers.size()) throw new IllegalStateException("内置物流公司缺失");
+                    for (int i = 0; i < expectedCarriers.size(); i++) {
+                        if (!expectedCarriers.get(i).equals(carriers.getItemAt(i))) throw new IllegalStateException("内置物流公司名称或编码不符");
+                    }
+                    report.put("builtInCarriers", expectedCarriers);
                     source.setSelectedIndex(2);
                     if (!window.getTitle().contains("顺丰")) throw new IllegalStateException("顺丰入口检查失败");
                     source.setSelectedIndex(0);
@@ -66,11 +73,11 @@ final class PackagingCheck {
         }
     }
 
-    private static JComboBox<?> findSource(java.awt.Container root) {
+    private static JComboBox<?> findComboBox(java.awt.Container root, String name) {
         for (java.awt.Component child : root.getComponents()) {
-            if (child instanceof JComboBox<?> box && "querySource".equals(child.getName())) return box;
+            if (child instanceof JComboBox<?> box && name.equals(child.getName())) return box;
             if (child instanceof java.awt.Container container) {
-                JComboBox<?> found = findSource(container);
+                JComboBox<?> found = findComboBox(container, name);
                 if (found != null) return found;
             }
         }
