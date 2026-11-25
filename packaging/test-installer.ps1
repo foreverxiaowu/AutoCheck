@@ -1,5 +1,9 @@
-﻿param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.2.1.exe'))
+﻿param([string]$Installer)
 $ErrorActionPreference = 'Stop'
+if (-not $Installer) {
+    [xml]$project = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../pom.xml') -Raw
+    $Installer = Join-Path $PSScriptRoot ("../dist/AutoCheck-" + $project.project.version + ".exe")
+}
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'The machine-wide installer test requires an administrator PowerShell session.'

@@ -58,6 +58,8 @@ public final class FilesService {
     public synchronized void saveEweRegions(EweRegions regions) throws IOException { atomicWrite(directory.resolve("regions.json"), regions); }
     public Track17Config loadTrack17Config() throws IOException { return read("carriers.json", Track17Config.class); }
     public synchronized void saveTrack17Config(Track17Config config) throws IOException { atomicWrite(directory.resolve("carriers.json"), config); }
+    ReleaseNotes.State loadReleaseNotesState() throws IOException { return read("release-notes.json", ReleaseNotes.State.class); }
+    synchronized void saveReleaseNotesState(ReleaseNotes.State state) throws IOException { atomicWrite(directory.resolve("release-notes.json"), state); }
     private <T> T read(String name, Class<T> type) throws IOException {
         Path path = directory.resolve(name);
         return Files.exists(path) ? JSON.readValue(path.toFile(), type) : null;

@@ -34,6 +34,9 @@ public final class Main {
                         }
                     });
                     window.setVisible(true);
+                    SwingUtilities.invokeLater(() -> {
+                        if (window.isDisplayable()) ReleaseNotes.showIfNeeded(window, data);
+                    });
                 }
                 catch (Exception e) { fail(e); }
             });

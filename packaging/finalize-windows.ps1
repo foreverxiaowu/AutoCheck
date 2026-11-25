@@ -1,11 +1,13 @@
 ﻿$ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+[xml]$project = Get-Content -LiteralPath (Join-Path $root 'pom.xml') -Raw
+$appVersion = [string]$project.project.version
 $distribution = Join-Path $root 'dist'
 $release = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'cache/temurin-release.json') -Raw | ConvertFrom-Json
 $reportPath = Join-Path $root 'target/windows-build/distribution-check.json'
 $check = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
 if ($check.status -ne 'passed') { throw 'Distribution self-test has not passed' }
-$artifacts = @('AutoCheck-1.2.1.exe','AutoCheck-1.2.1-Windows-x64-Portable.zip')
+$artifacts = @("AutoCheck-$appVersion.exe","AutoCheck-$appVersion-Windows-x64-Portable.zip")
 foreach ($name in $artifacts) { if (-not (Test-Path -LiteralPath (Join-Path $distribution $name))) { throw "Missing artifact: $name" } }
 Copy-Item -LiteralPath $reportPath -Destination (Join-Path $distribution 'distribution-check.json') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '使用说明.txt') -Destination $distribution -Force
@@ -20,7 +22,7 @@ if (Test-Path -LiteralPath $installationReport) {
     if ($installation.installerSha256 -eq $files[0].sha256 -and $installation.status -eq 'passed') { $installationTest = 'passed' }
 }
 $manifest = [ordered]@{
-    applicationVersion = '1.2.1'; platform = 'Windows x64'; javaVersion = $check.javaVersion
+    applicationVersion = $appVersion; platform = 'Windows x64'; javaVersion = $check.javaVersion
     installationScope = 'per-machine'; installationRequiresAdministrator = $true
     javaSource = $release.binary.package.link; javaSha256 = $release.binary.package.checksum
     browserRevision = '1255'; browserVersion = $check.browserVersion
@@ -28,6 +30,15 @@ $manifest = [ordered]@{
     iconSha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'autocheck.ico') -Algorithm SHA256).Hash
     embeddedApplicationIconCheck = $check.applicationIcon
     files = $files
+}
+$identityPath = Join-Path $root 'target/windows-build/installer-identity-check.json'
+if (Test-Path -LiteralPath $identityPath) {
+    $identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+    if ($identity.status -ne 'passed' -or $identity.version -ne $appVersion) { throw 'Installer identity check failed or has a stale version.' }
+    $manifest.installerIdentityCheck = 'passed'
+    $manifest.productCode = $identity.productCode
+    $manifest.upgradeCode = $identity.upgradeCode
+    Copy-Item -LiteralPath $identityPath -Destination (Join-Path $distribution 'installer-identity-check.json') -Force
 }
 $exitCheckPath = Join-Path $root 'target/windows-build/app-exit-check.json'
 if (Test-Path -LiteralPath $exitCheckPath) {

@@ -204,10 +204,11 @@ public final class MainWindow extends JFrame {
     }
 
     private JPanel resultsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12));
-        panel.setBorder(new EmptyBorder(17, 16, 14, 16));
-        JPanel top = new JPanel(new BorderLayout(0, 10));
-        JPanel statistics = new JPanel(new GridLayout(1, 4, 12, 0));
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
+        panel.setBorder(new EmptyBorder(8, 16, 10, 16));
+        JPanel top = new JPanel(new BorderLayout(0, 5));
+        JPanel statistics = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        statistics.setOpaque(false);
         statistics.add(UiTheme.statistic("全部运单", totalValue, UiTheme.BLUE, UiTheme.BLUE_TINT));
         statistics.add(UiTheme.statistic("已查询", completedValue, UiTheme.TEAL, UiTheme.TEAL_TINT));
         statistics.add(UiTheme.statistic("条件匹配", matchedValue, UiTheme.AMBER, UiTheme.AMBER_TINT));
@@ -246,9 +247,9 @@ public final class MainWindow extends JFrame {
         excel.addActionListener(e -> export(false)); json.addActionListener(e -> export(true));
         selectionActions.setToolTipText("筛选不会取消勾选；复制和导出也包含被筛选隐藏的勾选项。切换平台或公司会清空勾选。");
         for (JButton button : new JButton[]{copy,excel,json}) button.setToolTipText("仅处理勾选结果，包括筛选后隐藏的勾选项；不勾选则不会复制或导出。");
-        JPanel primaryFilters = new JPanel(new BorderLayout(0, 8));
+        JPanel primaryFilters = new JPanel(new BorderLayout(0, 5));
         primaryFilters.add(toolbar, BorderLayout.NORTH); primaryFilters.add(selectionActions, BorderLayout.SOUTH);
-        JPanel filters = new JPanel(new BorderLayout(0, 10));
+        JPanel filters = new JPanel(new BorderLayout(0, 5));
         filters.add(primaryFilters, BorderLayout.NORTH); filters.add(regionToolbar, BorderLayout.CENTER);
         filters.add(summary, BorderLayout.SOUTH); top.add(filters, BorderLayout.CENTER); panel.add(top, BorderLayout.NORTH);
         table.setRowHeight(42); table.setAutoCreateRowSorter(true);
@@ -300,7 +301,7 @@ public final class MainWindow extends JFrame {
         JScrollPane tablePane = new JScrollPane(table);
         tablePane.setMinimumSize(new Dimension(0, 90));
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tablePane, detailPane);
-        split.setResizeWeight(0.60); split.setDividerLocation(245); split.setDividerSize(12);
+        split.setResizeWeight(0.85); split.setDividerLocation(340); split.setDividerSize(8);
         split.setBorder(BorderFactory.createEmptyBorder());
         panel.add(split, BorderLayout.CENTER);
         return panel;

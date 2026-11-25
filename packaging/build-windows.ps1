@@ -3,10 +3,18 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Set-Location -LiteralPath $projectRoot
+[xml]$project = Get-Content -LiteralPath (Join-Path $projectRoot 'pom.xml') -Raw
+$appVersion = [string]$project.project.version
 $cache = Join-Path $PSScriptRoot 'cache'
 $workRoot = Join-Path $projectRoot 'target/windows-build'
 $distribution = Join-Path $projectRoot 'dist'
 New-Item -ItemType Directory -Path $cache, $distribution -Force | Out-Null
+$existingInstaller = Join-Path $distribution "AutoCheck-$appVersion.exe"
+$installedSameVersion = @(Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -eq 'AutoCheck' -and $_.DisplayVersion -eq $appVersion })
+if ((Test-Path -LiteralPath $existingInstaller) -or $installedSameVersion.Count -gt 0) {
+    throw "Version $appVersion is already packaged or installed. Increase the version in pom.xml for changed builds; reusing a version can cause Windows Installer error 1638."
+}
 
 function Reset-BuildDirectory([string]$path) {
     $resolved = [IO.Path]::GetFullPath($path)
@@ -22,7 +30,7 @@ if (-not $SkipBuild) {
     & mvn -q package
     if ($LASTEXITCODE -ne 0) { throw 'Maven build failed' }
 }
-$jar = Join-Path $projectRoot 'target/autocheck-1.2.1.jar'
+$jar = Join-Path $projectRoot "target/autocheck-$appVersion.jar"
 if (-not (Test-Path -LiteralPath $jar)) { throw "Missing application JAR: $jar" }
 
 # Only Eclipse Temurin's OpenJDK runtime is redistributed, with its legal directory intact.
@@ -82,7 +90,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'examples/4px-waybills.txt') -Des
 
 & (Join-Path $PSScriptRoot 'new-icon.ps1')
 $icon = Join-Path $PSScriptRoot 'autocheck.ico'
-& jpackage --type app-image --name AutoCheck --app-version 1.2.1 --vendor AutoCheck --description 'Multi-carrier batch tracking: YTO, 17TRACK, SF, EWE and 4PX' --input $inputDirectory --main-jar autocheck-1.2.1.jar --main-class cn.autocheck.Main --runtime-image $runtime --dest $imageDirectory --icon $icon --java-options '-Dfile.encoding=UTF-8'
+& jpackage --type app-image --name AutoCheck --app-version $appVersion --vendor AutoCheck --description 'Multi-carrier batch tracking: YTO, 17TRACK, SF, EWE and 4PX' --input $inputDirectory --main-jar "autocheck-$appVersion.jar" --main-class cn.autocheck.Main --runtime-image $runtime --dest $imageDirectory --icon $icon --java-options '-Dfile.encoding=UTF-8'
 if ($LASTEXITCODE -ne 0) { throw 'jpackage application image failed' }
 $image = Join-Path $imageDirectory 'AutoCheck'
 
@@ -117,12 +125,14 @@ $env:PATH = $wix + [IO.Path]::PathSeparator + $oldPath
 try {
     # Machine-wide MSI requests elevation for install/uninstall, including rollback-file security.
     # Keep the upgrade family, but old per-user installations must be removed in their original context.
-    & jpackage --type exe --name AutoCheck --app-version 1.2.1 --vendor AutoCheck --app-image $image --icon $icon --dest $stagingDistribution --install-dir AutoCheckApp --win-dir-chooser --win-menu --win-menu-group AutoCheck --win-shortcut --win-shortcut-prompt --win-upgrade-uuid '48a785ab-b688-4c8b-a090-a0b3ed5cfb3a' --temp (Join-Path $workRoot 'installer')
+    & jpackage --type exe --name AutoCheck --app-version $appVersion --vendor AutoCheck --app-image $image --icon $icon --dest $stagingDistribution --install-dir AutoCheckApp --win-dir-chooser --win-menu --win-menu-group AutoCheck --win-shortcut --win-shortcut-prompt --win-upgrade-uuid '48a785ab-b688-4c8b-a090-a0b3ed5cfb3a' --temp (Join-Path $workRoot 'installer')
     if ($LASTEXITCODE -ne 0) { throw 'jpackage Windows installer failed' }
 } finally { $env:PATH = $oldPath }
 
-$portableZip = Join-Path $stagingDistribution 'AutoCheck-1.2.1-Windows-x64-Portable.zip'
+& (Join-Path $PSScriptRoot 'test-installer-identity.ps1') -Msi (Join-Path $workRoot "installer/images/win-exe.image/AutoCheck-$appVersion.msi") -ExpectedVersion $appVersion
+
+$portableZip = Join-Path $stagingDistribution "AutoCheck-$appVersion-Windows-x64-Portable.zip"
 Compress-Archive -LiteralPath $image -DestinationPath $portableZip -CompressionLevel Optimal -Force
-Copy-Item -LiteralPath (Join-Path $stagingDistribution 'AutoCheck-1.2.1.exe'),$portableZip -Destination $distribution -Force
+Copy-Item -LiteralPath (Join-Path $stagingDistribution "AutoCheck-$appVersion.exe"),$portableZip -Destination $distribution -Force
 Copy-Item -LiteralPath $report -Destination (Join-Path $distribution 'distribution-check.json')
 & (Join-Path $PSScriptRoot 'finalize-windows.ps1')

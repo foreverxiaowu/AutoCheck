@@ -2,9 +2,11 @@
 
 Java 17 桌面程序，圆通国际每批最多查询 10 单，17TRACK 每批最多查询 40 单，顺丰国际每批最多查询 20 单，EWE 与 4PX 每批查询 10 单，按各单号的最新物流信息匹配自定义条件。各平台独立保存设置与进度，无需搭建数据库或 Web 服务。
 
+v1.2.2 修复安装包反复使用 1.2.1 版本号、与已有安装发生 Windows Installer 1638 冲突的问题，沿用同一升级标识。打包脚本从 `pom.xml` 读取版本，拒绝覆盖已打包或已安装的同版本，并检查 MSI 产品标识和旧版本升级规则。首次更新说明仍展示 **V1.2.1** 的功能内容，每位用户确认一次后不再提示。
+
 v1.2.1 新增结果勾选、多选复制单号、按勾选导出 Excel，并缩小顶部统计卡片。17TRACK 与顺丰国际支持 Windows 内嵌官网验证预览，17TRACK 新增默认（0）及洋包裹（101107）配置。保留 EWE、4PX 查询、EWE 地区分类、彩色界面、自适应表格和统一图标；安装版供所有用户使用，安装与卸载需要管理员授权，没有管理员权限时可使用免安装版。
 
-**已发布的 v1.1.0：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)。v1.2.1 构建产物位于本机 `dist/`，此链接仍是旧版。
+**已发布的 v1.1.0：[下载 EXE 安装包](https://github.com/foreverxiaowu/AutoCheck/releases/download/v1.1.0/AutoCheck-1.1.0.exe)** · [版本说明与使用说明](https://github.com/foreverxiaowu/AutoCheck/releases/tag/v1.1.0)。v1.2.2 构建产物位于本机 `dist/`，此链接仍是旧版。
 
 安装包已包含 Java 和查询浏览器，适用于 Windows 10/11 的 Intel / AMD 64 位电脑。
 
@@ -12,8 +14,8 @@ v1.2.1 新增结果勾选、多选复制单号、按勾选导出 Excel，并缩�
 
 面向 Windows 10/11 的 Intel / AMD 64 位电脑，已提供两种自带 Java 和查询浏览器的发行包，目标电脑无需安装 Java、Maven、Chrome 或 Edge：
 
-- **安装版**：运行 `dist/AutoCheck-1.2.1.exe`，授权管理员权限，按向导安装后从桌面或开始菜单打开。默认安装到 `%ProgramFiles%\AutoCheckApp`，供所有用户使用。
-- **免安装版**：将 `dist/AutoCheck-1.2.1-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
+- **安装版**：运行 `dist/AutoCheck-1.2.2.exe`，授权管理员权限，按向导安装后从桌面或开始菜单打开。默认安装到 `%ProgramFiles%\AutoCheckApp`，供所有用户使用。
+- **免安装版**：将 `dist/AutoCheck-1.2.2-Windows-x64-Portable.zip` 完整解压，然后运行 `AutoCheck/AutoCheck.exe`。复制到其他电脑时需要复制整个目录。
 
 1.1.0 是按用户安装的版本，升级到 1.2.1 前请在原安装用户下卸载旧版；不同安装范围不能保证自动升级。关闭窗口后，程序会先等待当前查询、保存已经返回的结果并关闭查询浏览器，再退出整个进程。`app.lock` 文件可以保留，文件本身存在不会阻止启动。
 
@@ -28,10 +30,12 @@ v1.2.1 新增结果勾选、多选复制单号、按勾选导出 Excel，并缩�
 也可以在项目目录运行：
 
 ```powershell
-java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.2.1.jar
+java '-Dfile.encoding=UTF-8' -jar target/autocheck-1.2.2.jar
 ```
 
 ## 使用
+
+首次启动时会显示 **V1.2.1 版本更新**，介绍结果多选、复制单号、Excel 导出、内嵌官网验证、新增物流公司及紧凑界面。点击“我知道了，开始使用”或关闭弹窗后保存已读状态，后续启动不再显示，也不会因切换物流平台而重复提示。安装版、免安装版在当前 Windows 用户的数据目录保存 `release-notes.json`，与查询进度、筛选设置分开保存。
 
 桌面界面使用 Java Swing + FlatLaf 浅色主题，提供蓝紫渐变顶部、彩色查询统计卡片和状态颜色。导入、继续查询、暂停、停止及导出操作集中显示；结果、筛选设置和日志分别查看。结果表格随窗口宽度自适应，“物流进度”列优先利用剩余空间；较窄时保留单号、时间等列的必要宽度并支持横向滚动。
 
@@ -187,7 +191,7 @@ mvn '-Dautocheck.track17LiveSmoke=true' '-Dtest=SmokeTest#track17LiveEndpointRet
 # 可选：访问真实圆通接口，使用样例 10 个单号；可能触发人工验证
 mvn '-Dautocheck.liveSmoke=true' '-Dtest=SmokeTest#liveEndpointReturnsAnExplicitResultOrManualVerification' test
 # 构建后验证最终 JAR 中的 Excel、JSON、浏览器驱动及桌面界面
-java -cp 'target/test-classes;target/autocheck-1.2.1.jar' cn.autocheck.PackagedSmoke
+java -cp 'target/test-classes;target/autocheck-1.2.2.jar' cn.autocheck.PackagedSmoke
 # 构建自带 Java 和浏览器的 Windows 安装版及免安装版
 powershell -ExecutionPolicy Bypass -File packaging/build-windows.ps1
 # 构建过程也会两次启动并关闭真实 EXE，确认原生启动器/JVM 都退出且运行锁已释放

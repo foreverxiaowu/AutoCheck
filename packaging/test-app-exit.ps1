@@ -13,6 +13,8 @@ $oldLocalAppData = $env:LOCALAPPDATA
 $oldJavaOptions = $env:JAVA_TOOL_OPTIONS
 $oldJdkOptions = $env:JDK_JAVA_OPTIONS
 $oldPrivateOptions = $env:_JAVA_OPTIONS
+[xml]$project = Get-Content -LiteralPath (Join-Path $root 'pom.xml') -Raw
+$releaseVersion = [string]$project.project.version
 $runs = @()
 try {
     # Keep the real user's progress, settings and lock untouched.
@@ -20,6 +22,11 @@ try {
     $env:JAVA_TOOL_OPTIONS = $null
     $env:JDK_JAVA_OPTIONS = $null
     $env:_JAVA_OPTIONS = $null
+    # This check targets closing the main window after onboarding. First-launch notice
+    # acknowledgment and repeat-start behavior are covered by ReleaseNotesTest.
+    $testData = Join-Path $testRoot 'AutoCheck'
+    New-Item -ItemType Directory -Path $testData -Force | Out-Null
+    @{ acknowledgedVersions = @(@('1.2.1',$releaseVersion) | Select-Object -Unique) } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $testData 'release-notes.json') -Encoding utf8
     foreach ($run in 1..2) {
         $process = Start-Process -FilePath $launcherPath -WorkingDirectory $env:TEMP -WindowStyle Hidden -PassThru
         $deadline = [DateTime]::UtcNow.AddSeconds(20)

@@ -1,14 +1,15 @@
 AutoCheck · 圆通国际 / 17TRACK / 顺丰国际 / EWE / 4PX 批量查询（Windows 64 位）
 
 一、安装版
-双击 AutoCheck-1.2.1.exe，按安装向导完成后，从桌面或开始菜单启动 AutoCheck。
+1.2.2 为安装修复版，解决同版本重复打包引发的 Windows Installer 1638 冲突；首次更新说明仍显示 V1.2.1 的功能。
+双击 AutoCheck-1.2.2.exe，按安装向导完成后，从桌面或开始菜单启动 AutoCheck。
 安装包已经包含 Java 运行环境和查询浏览器，无需安装 Java、Maven、Chrome 或 Edge。
 安装版改为供所有用户使用，安装和卸载时需要管理员授权，默认位于 Program Files 下的 AutoCheckApp。
 从 1.1.0 升级时，请先在原安装用户下卸载旧版；按用户安装的旧版不能保证自动迁移为所有用户安装。
 没有管理员权限时请使用免安装版。
 
 二、免安装版
-将 AutoCheck-1.2.1-Windows-x64-Portable.zip 完整解压到任意可读位置，再双击其中的 AutoCheck/AutoCheck.exe。
+将 AutoCheck-1.2.2-Windows-x64-Portable.zip 完整解压到任意可读位置，再双击其中的 AutoCheck/AutoCheck.exe。
 请勿只复制 AutoCheck.exe，也不要直接在 ZIP 内运行。整个目录中的 runtime 和 app 都需要保留。
 
 三、使用方法
