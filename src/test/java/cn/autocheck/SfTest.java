@@ -88,6 +88,7 @@ class SfTest {
                 assertEquals(1,calls.get(),first.message());
                 assertEquals(numbers.get(0),page.locator("#waybill_ids").inputValue());
                 page.evaluate("()=>submitBatch()");
+                page.waitForTimeout(200); // A result may arrive before the human clicks Continue.
                 Reply reply=gateway.query(numbers,"",""); assertEquals(Kind.SUCCESS,reply.kind(), "calls="+calls.get()+" documents="+documents.get()+" message="+reply.message());
                 assertEquals("客户已取消寄件",gateway.parse(numbers,reply.payload()).get(0).latest().detail());
                 assertEquals(1,documents.get());

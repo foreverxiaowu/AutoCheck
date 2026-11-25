@@ -9,10 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.awt.Frame;
+import java.util.concurrent.CancellationException;
+import java.util.function.Consumer;
 
 /** The official page obtains current verification tickets; tickets are never persisted or replayed. */
 public final class SfGateway implements TrackingGateway {
-    public static final String TRACKING_URL = "https://www.sf-international.com/cn/sc/dynamic_function/waybill/";
+    public static final String TRACKING_URL = "https://www.sf-international.com/cn/sc/support/querySupport/waybill";
     private static final String ROUTE_PREFIX = "/site/core-service/web/bills/";
     private final Path profile;
     private Playwright playwright;
@@ -22,8 +25,22 @@ public final class SfGateway implements TrackingGateway {
     private final Map<String, JsonNode> completed = new LinkedHashMap<>();
     private Reply signal;
     private boolean waitingForHuman;
+    private Frame owner;
+    private BatchRunner.Control control;
+    private Consumer<String> notice=message -> {};
+    private EmbeddedBrowserWindow embedded;
 
     public SfGateway(Path profile) { this.profile = profile; }
+    SfGateway(Path profile,Frame owner,BatchRunner.Control control,Consumer<String> notice) {
+        this(profile);this.owner=owner;this.control=control;this.notice=notice;
+    }
+    boolean hasEmbeddedBrowser() {return embedded!=null;}
+    BatchRunner.Answer verifyEmbedded(Reply reply,BatchRunner.Control control) throws Exception {
+        return embedded.verify(reply.message(),control);
+    }
+    private BrowserType.LaunchPersistentContextOptions windowOptions(BrowserType.LaunchPersistentContextOptions options) {
+        return EmbeddedBrowserWindow.launchOptions(options,owner!=null);
+    }
     SfGateway(Page page) { this(Path.of(".")); this.page = page; page.onResponse(this::receive); }
     @Override public int batchSize() { return 20; }
     @Override public List<Models.Result> parse(List<String> numbers, JsonNode root) throws Exception { return new SfParser().parse(numbers, root); }
@@ -37,14 +54,14 @@ public final class SfGateway implements TrackingGateway {
         Path bundled = AppPaths.bundledBrowser();
         if (bundled != null) {
             if (!Files.isRegularFile(bundled)) throw new IOException("内置浏览器缺失：" + bundled);
-            context = playwright.chromium().launchPersistentContext(profile, BrowserGateway.bundledBrowserOptions(bundled));
+            context = playwright.chromium().launchPersistentContext(profile, windowOptions(BrowserGateway.bundledBrowserOptions(bundled)));
         } else {
             List<String> errors = new ArrayList<>();
             for (String channel : List.of("chrome", "msedge")) {
                 try {
                     context = playwright.chromium().launchPersistentContext(profile,
-                        new BrowserType.LaunchPersistentContextOptions().setChannel(channel).setHeadless(false)
-                            .setLocale("zh-CN").setTimezoneId("Asia/Shanghai").setViewportSize(1280, 850));
+                        windowOptions(new BrowserType.LaunchPersistentContextOptions().setChannel(channel).setHeadless(false)
+                            .setLocale("zh-CN").setTimezoneId("Asia/Shanghai").setViewportSize(1280, 850)));
                     break;
                 } catch (PlaywrightException e) { errors.add(channel + ": " + e.getMessage().split("\n")[0]); }
             }
@@ -53,6 +70,7 @@ public final class SfGateway implements TrackingGateway {
         page = context.pages().isEmpty() ? context.newPage() : context.pages().get(0);
         page.setDefaultTimeout(10000);
         page.onResponse(this::receive);
+        embedded=EmbeddedBrowserWindow.openAttached(page,owner,control,"顺丰国际",notice);
     }
 
     static boolean belongsToBatch(String url, List<String> numbers) {
@@ -87,7 +105,12 @@ public final class SfGateway implements TrackingGateway {
         if (!continuing) {
             pending = List.copyOf(numbers); completed.clear();
             try {
-                page.navigate(TRACKING_URL, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED).setTimeout(30000));
+                try {
+                    page.navigate(TRACKING_URL, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED).setTimeout(30000));
+                } catch(TimeoutError e) {
+                    // Slow ancillary resources must not discard a tracking form that is already ready.
+                    if(!page.locator("#waybill_ids").isVisible())throw e;
+                }
                 Locator agree = page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
                     new Page.GetByRoleOptions().setName(Pattern.compile("^同\\s*意$")));
                 if (agree.count() > 0 && agree.first().isVisible()) agree.first().click();
@@ -98,6 +121,7 @@ public final class SfGateway implements TrackingGateway {
         }
         long deadline = System.nanoTime() + 30_000_000_000L;
         do {
+            if(control!=null && control.isCancelled())throw new CancellationException("任务已停止");
             page.waitForTimeout(100);
             if (signal != null) {
                 if (signal.kind() == Kind.BROWSER_VERIFICATION) {
@@ -139,7 +163,10 @@ public final class SfGateway implements TrackingGateway {
         return new Reply(Kind.SUCCESS, root, "", "");
     }
     @Override public void close() {
-        try { if (context != null) context.close(); }
-        finally { if (playwright != null) playwright.close(); }
+        try { if(embedded!=null)embedded.close(); }
+        finally {
+            try { if (context != null) context.close(); }
+            finally { if (playwright != null) playwright.close(); }
+        }
     }
 }

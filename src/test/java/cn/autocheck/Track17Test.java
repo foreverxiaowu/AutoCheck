@@ -110,12 +110,40 @@ class Track17Test {
         Track17Config upgraded = Track17Config.load(directory);
         assertEquals(12345, upgraded.selectedCode());
         assertEquals(List.of(new Track17Config.Carrier("自定义公司", 12345),
-            new Track17Config.Carrier("我的邮政", 3011), new Track17Config.Carrier("递四方", 190094)), upgraded.carriers());
+            new Track17Config.Carrier("我的邮政", 3011), new Track17Config.Carrier("递四方", 190094),
+            new Track17Config.Carrier("默认", 0), new Track17Config.Carrier("洋包裹", 101107)), upgraded.carriers());
         assertEquals(upgraded, Track17Config.load(directory));
 
         Track17Config edited = new Track17Config(List.of(upgraded.carriers().get(0)), 12345);
         edited.save(directory);
         assertEquals(edited, Track17Config.load(directory), "Presets deleted after upgrading must stay deleted");
+    }
+
+    @Test void defaultDetectionHasSeparateProgressAndRejectsNegativeOrDuplicateCodes() throws Exception {
+        Track17Config config=Track17Config.defaults();
+        assertTrue(config.carriers().contains(new Track17Config.Carrier("默认",0)));
+        assertTrue(config.carriers().contains(new Track17Config.Carrier("洋包裹",101107)));
+        Track17Config selected=new Track17Config(config.carriers(),0);
+        selected.save(directory);assertEquals(selected,Track17Config.load(directory));
+        FilesService automatic=new FilesService(Track17Config.progressDirectory(directory,0));
+        automatic.saveSnapshot(new Snapshot(1,NUMBERS,List.of()));
+        assertEquals(NUMBERS,automatic.loadSnapshot().waybills());
+        assertNull(new FilesService(Track17Config.progressDirectory(directory,101107)).loadSnapshot());
+        assertThrows(IllegalArgumentException.class,()->Track17Config.progressDirectory(directory,-1));
+        assertThrows(IllegalArgumentException.class,()->new Track17Config(List.of(new Track17Config.Carrier("无效",-1)),-1));
+        assertThrows(IllegalArgumentException.class,()->new Track17Config(List.of(new Track17Config.Carrier("a",0),new Track17Config.Carrier("b",0)),0));
+        assertThrows(IllegalArgumentException.class,()->new Track17Gateway(directory,-1));
+        try(var gateway=new Track17Gateway(directory,0)){assertEquals(40,gateway.batchSize());}
+        assertTrue(Track17Gateway.trackingUrl(NUMBERS,0).endsWith("&fc=0"));
+    }
+
+    @Test void upgradesVersionOneWithoutRestoringDeletedOldPresetsOrDuplicatingCustomNames() throws Exception {
+        new Track17Config(List.of(new Track17Config.Carrier("我的默认",0),new Track17Config.Carrier("自定义公司",12345)),0,1).save(directory);
+        Track17Config upgraded=Track17Config.load(directory);
+        assertEquals(0,upgraded.selectedCode());
+        assertEquals(List.of(new Track17Config.Carrier("我的默认",0),new Track17Config.Carrier("自定义公司",12345),
+            new Track17Config.Carrier("洋包裹",101107)),upgraded.carriers());
+        assertEquals(upgraded,Track17Config.load(directory));
     }
 
     @Test void batchesFortyAndRetriesManualVerificationWithoutSavingIncompleteBatch() throws Exception {
@@ -154,6 +182,11 @@ class Track17Test {
         assertFalse(Track17Gateway.belongsToBatch(body, NUMBERS, 12345));
         assertFalse(Track17Gateway.belongsToBatch(body, List.of("OTHER1"), 190175));
         assertFalse(Track17Gateway.belongsToBatch("{\"data\":[]}", NUMBERS, 190175));
+        assertTrue(Track17Gateway.belongsToBatch(body,NUMBERS,0));
+        assertTrue(Track17Gateway.belongsToBatch(body.replace("190175","0"),NUMBERS,0));
+        assertFalse(Track17Gateway.belongsToBatch(body.replace("\"fc\":190175,",""),NUMBERS,0));
+        assertFalse(Track17Gateway.belongsToBatch(body.replace("190175","-1"),NUMBERS,0));
+        assertFalse(Track17Gateway.belongsToBatch(body.replace("\"sc\":0","\"sc\":1"),NUMBERS,0));
     }
 
     @Test void migratesOldAddressRulesAndExportsOnlyProgress() throws Exception {

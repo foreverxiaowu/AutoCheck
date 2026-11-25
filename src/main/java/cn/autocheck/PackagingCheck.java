@@ -32,6 +32,14 @@ final class PackagingCheck {
             store.saveSnapshot(snapshot);
             if (!snapshot.equals(store.loadSnapshot())) throw new IllegalStateException("进度保存失败");
             report.put("excelAndPersistence", "passed");
+            Path exported=testData.resolve("selected.xlsx");
+            var selectedResult=new Models.Result("00001234567890",Models.QueryState.NO_DATA,List.of(),"","self-test");
+            ResultExports.writeXlsx(exported,List.of(selectedResult),List.of(),true,false,MainlandLocation::classify);
+            try(var input=Files.newInputStream(exported);var workbook=new XSSFWorkbook(input)) {
+                if(!selectedResult.waybillNo().equals(workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue()))
+                    throw new IllegalStateException("勾选 Excel 导出未保留文本单号");
+            }
+            report.put("selectedExcelExport","passed");
             try (var playwright = Playwright.create(new Playwright.CreateOptions().setEnv(Map.of("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1")));
                  var context = playwright.chromium().launchPersistentContext(testData.resolve("profile"), BrowserGateway.bundledBrowserOptions(browser).setHeadless(true))) {
                 var page = context.newPage();
@@ -39,6 +47,27 @@ final class PackagingCheck {
                 if (!"AutoCheck self test".equals(page.title())) throw new IllegalStateException("内置浏览器执行失败");
                 report.put("browserVersion", context.browser().version());
                 report.put("browserLaunch", "passed");
+            }
+            JFrame[] browserOwner=new JFrame[1];
+            try {
+                SwingUtilities.invokeAndWait(()->{browserOwner[0]=new JFrame("AutoCheck browser host check");browserOwner[0].setSize(1000,750);browserOwner[0].setVisible(true);});
+                try(var playwright=Playwright.create(new Playwright.CreateOptions().setEnv(Map.of("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD","1")));
+                    var context=playwright.chromium().launchPersistentContext(testData.resolve("embedded-profile"),
+                        EmbeddedBrowserWindow.launchOptions(BrowserGateway.bundledBrowserOptions(browser),true))) {
+                    var page=context.pages().get(0);
+                    var control=new BatchRunner.Control();
+                    try(var host=EmbeddedBrowserWindow.openAttached(page,browserOwner[0],control,"打包检查",message->{})) {
+                        if(host==null || !host.isAttached())throw new IllegalStateException("内置浏览器嵌入失败");
+                        page.setContent("<input id='session-check'>");page.locator("#session-check").fill("same session");
+                        int width=((Number)page.evaluate("innerWidth")).intValue();
+                        host.resizeForTest(950,650);page.waitForTimeout(300);
+                        if(((Number)page.evaluate("innerWidth")).intValue()>=width)throw new IllegalStateException("内嵌浏览器未随窗口缩放");
+                        if(!"same session".equals(page.locator("#session-check").inputValue()))throw new IllegalStateException("内嵌页面会话未保留");
+                    }
+                }
+                report.put("embeddedBrowserHost","passed");
+            } finally {
+                SwingUtilities.invokeAndWait(()->{if(browserOwner[0]!=null)browserOwner[0].dispose();});
             }
             SwingUtilities.invokeAndWait(() -> {
                 try {

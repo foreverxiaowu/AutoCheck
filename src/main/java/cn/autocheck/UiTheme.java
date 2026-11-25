@@ -69,10 +69,10 @@ final class UiTheme {
         return label;
     }
     static JPanel statistic(String caption, JLabel value, Color color, Color tint) {
-        JPanel card = new Surface(new BorderLayout(0, 4), tint, null);
-        card.setBorder(new EmptyBorder(10, 16, 10, 16));
-        card.add(label(caption, 12, Font.PLAIN, color), BorderLayout.NORTH);
-        value.setFont(value.getFont().deriveFont(Font.BOLD, 27f)); value.setForeground(color);
+        JPanel card = new Surface(new BorderLayout(0, 2), tint, null);
+        card.setBorder(new EmptyBorder(6, 12, 6, 12));
+        card.add(label(caption, 11, Font.PLAIN, color), BorderLayout.NORTH);
+        value.setFont(value.getFont().deriveFont(Font.BOLD, 22f)); value.setForeground(color);
         card.add(value, BorderLayout.CENTER);
         return card;
     }

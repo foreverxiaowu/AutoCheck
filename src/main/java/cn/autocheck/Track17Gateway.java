@@ -9,6 +9,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.awt.Frame;
+import java.util.concurrent.CancellationException;
+import java.util.function.Consumer;
 
 /** Uses the public tracking page's normal query flow, including its fresh sign and manual CAPTCHA. */
 public final class Track17Gateway implements TrackingGateway {
@@ -22,11 +25,26 @@ public final class Track17Gateway implements TrackingGateway {
     private final Map<String, JsonNode> completed = new LinkedHashMap<>();
     private Reply signal;
     private boolean verifying;
+    private Frame owner;
+    private BatchRunner.Control control;
+    private Consumer<String> notice = message -> {};
+    private EmbeddedBrowserWindow embedded;
 
     public Track17Gateway(Path profile, int carrierCode) {
-        if (carrierCode <= 0) throw new IllegalArgumentException("请选择有效的物流公司");
+        if (carrierCode < 0) throw new IllegalArgumentException("请选择有效的物流公司");
         this.profile = profile;
         this.carrierCode = carrierCode;
+    }
+    Track17Gateway(Path profile, int carrierCode, Frame owner, BatchRunner.Control control, Consumer<String> notice) {
+        this(profile, carrierCode);
+        this.owner=owner; this.control=control; this.notice=notice;
+    }
+    boolean hasEmbeddedBrowser() { return embedded != null; }
+    BatchRunner.Answer verifyEmbedded(Reply reply, BatchRunner.Control control) throws Exception {
+        return embedded.verify(reply.message(),control);
+    }
+    private BrowserType.LaunchPersistentContextOptions windowOptions(BrowserType.LaunchPersistentContextOptions options) {
+        return EmbeddedBrowserWindow.launchOptions(options,owner!=null);
     }
     Track17Gateway(Page page, int carrierCode) {
         this(Path.of("."), carrierCode);
@@ -51,14 +69,14 @@ public final class Track17Gateway implements TrackingGateway {
         Path bundled = AppPaths.bundledBrowser();
         if (bundled != null) {
             if (!Files.isRegularFile(bundled)) throw new IOException("内置浏览器缺失：" + bundled);
-            context = playwright.chromium().launchPersistentContext(profile, BrowserGateway.bundledBrowserOptions(bundled));
+            context = playwright.chromium().launchPersistentContext(profile, windowOptions(BrowserGateway.bundledBrowserOptions(bundled)));
         } else {
             List<String> errors = new ArrayList<>();
             for (String channel : List.of("chrome", "msedge")) {
                 try {
                     context = playwright.chromium().launchPersistentContext(profile,
-                        new BrowserType.LaunchPersistentContextOptions().setChannel(channel).setHeadless(false)
-                            .setLocale("zh-CN").setTimezoneId("Asia/Shanghai").setViewportSize(1280, 850));
+                        windowOptions(new BrowserType.LaunchPersistentContextOptions().setChannel(channel).setHeadless(false)
+                            .setLocale("zh-CN").setTimezoneId("Asia/Shanghai").setViewportSize(1280, 850)));
                     break;
                 } catch (PlaywrightException e) { errors.add(channel + ": " + e.getMessage().split("\n")[0]); }
             }
@@ -67,6 +85,7 @@ public final class Track17Gateway implements TrackingGateway {
         page = context.pages().isEmpty() ? context.newPage() : context.pages().get(0);
         page.setDefaultTimeout(30000);
         page.onResponse(this::receive);
+        embedded=EmbeddedBrowserWindow.openAttached(page,owner,control,"17TRACK",notice);
     }
 
     private void receive(Response response) {
@@ -80,12 +99,12 @@ public final class Track17Gateway implements TrackingGateway {
                 verifying = reply.kind() == Kind.BROWSER_VERIFICATION;
                 return;
             }
-            verifying = false;
+            // Keep the verification batch until query() resumes, even if the website already returned results.
             signal = null;
             for (JsonNode shipment : reply.payload().path("shipments")) {
                 String number = shipment.path("number").asText();
                 if (!pending.contains(number)) continue;
-                if (shipment.hasNonNull("carrier") && shipment.path("carrier").asInt() != carrierCode) {
+                if (carrierCode > 0 && shipment.hasNonNull("carrier") && shipment.path("carrier").asInt() != carrierCode) {
                     signal = new Reply(Kind.ERROR, null, "", "返回的物流公司与所选公司不一致，请检查 fc 配置");
                     continue;
                 }
@@ -100,7 +119,10 @@ public final class Track17Gateway implements TrackingGateway {
             JsonNode data = FilesService.JSON.readTree(body).path("data");
             if (!data.isArray() || data.isEmpty()) return false;
             for (JsonNode item : data) {
-                if (!pending.contains(item.path("num").asText()) || item.path("fc").asInt() != carrierCode || item.path("sc").asInt() != 0) return false;
+                JsonNode fc=item.path("fc"),sc=item.path("sc");
+                // Default detection may submit a resolved carrier during the website's normal polling flow.
+                if (!pending.contains(item.path("num").asText()) || !fc.isIntegralNumber() || !fc.canConvertToInt() || fc.asInt()<0
+                    || (carrierCode>0 && fc.asInt()!=carrierCode) || !sc.isIntegralNumber() || !sc.canConvertToInt() || sc.asInt()!=0) return false;
             }
             return true;
         } catch (Exception e) { return false; }
@@ -122,6 +144,7 @@ public final class Track17Gateway implements TrackingGateway {
         }
         long deadline = System.nanoTime() + 30_000_000_000L;
         do {
+            if(control!=null && control.isCancelled())throw new CancellationException("任务已停止");
             // Pump browser events: manual verification may already have produced the original batch's response.
             page.waitForTimeout(100);
             if (signal != null) return signal;
@@ -137,6 +160,7 @@ public final class Track17Gateway implements TrackingGateway {
         return new Reply(Kind.BROWSER_VERIFICATION, null, "", message);
     }
     private Reply combined() {
+        verifying = false;
         ObjectNode root = FilesService.JSON.createObjectNode();
         var shipments = root.putArray("shipments");
         pending.stream().map(completed::get).filter(Objects::nonNull).forEach(shipments::add);
@@ -159,7 +183,9 @@ public final class Track17Gateway implements TrackingGateway {
     }
 
     @Override public void close() {
-        try { if (context != null) context.close(); }
+        try { if(embedded!=null)embedded.close(); }
+        finally { try { if (context != null) context.close(); }
         finally { if (playwright != null) playwright.close(); }
+        }
     }
 }

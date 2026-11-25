@@ -1,11 +1,11 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $distribution = Join-Path $root 'dist'
 $release = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'cache/temurin-release.json') -Raw | ConvertFrom-Json
 $reportPath = Join-Path $root 'target/windows-build/distribution-check.json'
 $check = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
 if ($check.status -ne 'passed') { throw 'Distribution self-test has not passed' }
-$artifacts = @('AutoCheck-1.2.0.exe','AutoCheck-1.2.0-Windows-x64-Portable.zip')
+$artifacts = @('AutoCheck-1.2.1.exe','AutoCheck-1.2.1-Windows-x64-Portable.zip')
 foreach ($name in $artifacts) { if (-not (Test-Path -LiteralPath (Join-Path $distribution $name))) { throw "Missing artifact: $name" } }
 Copy-Item -LiteralPath $reportPath -Destination (Join-Path $distribution 'distribution-check.json') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '使用说明.txt') -Destination $distribution -Force
@@ -20,7 +20,7 @@ if (Test-Path -LiteralPath $installationReport) {
     if ($installation.installerSha256 -eq $files[0].sha256 -and $installation.status -eq 'passed') { $installationTest = 'passed' }
 }
 $manifest = [ordered]@{
-    applicationVersion = '1.2.0'; platform = 'Windows x64'; javaVersion = $check.javaVersion
+    applicationVersion = '1.2.1'; platform = 'Windows x64'; javaVersion = $check.javaVersion
     installationScope = 'per-machine'; installationRequiresAdministrator = $true
     javaSource = $release.binary.package.link; javaSha256 = $release.binary.package.checksum
     browserRevision = '1255'; browserVersion = $check.browserVersion

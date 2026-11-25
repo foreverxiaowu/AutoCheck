@@ -1,4 +1,4 @@
-param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.2.0.exe'))
+﻿param([string]$Installer = (Join-Path $PSScriptRoot '../dist/AutoCheck-1.2.1.exe'))
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {

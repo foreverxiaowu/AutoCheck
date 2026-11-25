@@ -1,5 +1,10 @@
 AutoCheck Windows distribution - third-party components
 
+Java Native Access (JNA / jna-platform) 5.18.1
+https://github.com/java-native-access/jna
+Dual licensed under LGPL 2.1 or later / Apache License 2.0; used under Apache License 2.0.
+Original license notices are retained in the application JAR. Hosts the optional Windows 17TRACK / SF International browser preview.
+
 FlatLaf 3.7
 https://www.formdev.com/flatlaf/
 https://github.com/JFormDesigner/FlatLaf
